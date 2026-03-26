@@ -1,16 +1,33 @@
 # 宜家天润超市 运营决策看板
 
-实时连接 SQL Server 数据库，自动获取最新销售数据，以 Web 看板形式展示连锁超市的核心经营指标。
+实时连接 SQL Server 数据库，自动获取最新销售数据，以 Web 看板和报表中心两种形式展示连锁超市的核心经营指标。
 
 ## 项目结构
 
 ```
 yjtr_data_analysis/
-├── app.py                  # Flask 后端（数据库连接 + 8 个 REST API）
-├── templates/
-│   └── dashboard.html      # 前端看板（ECharts 图表 + 自动刷新）
-├── db_tables.md            # 数据库表结构文档（19 张核心表）
-└── README.md               # 项目说明
+├── app.py               # 入口：创建 Flask app，注册蓝图，启动服务
+├── db.py                # 数据库连接、Redis 缓存、公共工具函数
+├── requirements.txt     # Python 依赖
+├── .gitignore
+│
+├── routes/              # 路由蓝图（各模块互相独立）
+│   ├── dashboard.py     # 看板首页 API（8 个指标）
+│   └── reports.py       # 报表中心 API（T1～T13）
+│
+├── templates/           # 前端页面（Flask 模板）
+│   ├── dashboard.html   # 运营看板
+│   └── reports.html     # 报表中心
+│
+├── sql/                 # SQL 参考脚本
+│   ├── basic.sql        # 核心查询逻辑
+│   └── basic_backup.sql
+│
+└── docs/                # 文档与需求资料
+    ├── db_tables.md     # 数据库表结构（19 张核心表）
+    ├── speed_plan.md    # 性能优化方案
+    ├── 报表全量可视化.md
+    └── 宜家天润报表需求.xls
 ```
 
 ## 技术架构
@@ -18,33 +35,27 @@ yjtr_data_analysis/
 | 层级 | 技术 |
 |------|------|
 | 后端 | Python Flask + pyodbc |
+| 缓存 | Redis（降级为内存缓存）5 分钟 TTL |
 | 前端 | 原生 HTML/CSS/JS + ECharts 5.5 |
 | 数据库 | SQL Server (`enjoy_shq_test`) |
-| 缓存策略 | 后端 5 分钟内存缓存 + 前端 10 分钟轮询刷新 |
 
 ## 数据流向
 
 ```
 SQL Server (enjoy_shq_test)
-    │
     │  pyodbc 查询
     ▼
-Flask 后端 (app.py)
-    │  get_latest_date() → 动态获取数据库最新日期作为"今天"
-    │  cached_query()    → 5 分钟 TTL 内存缓存
-    │  8 个 /api/* 端点  → 返回 JSON
+db.py
+    │  get_latest_date() → 动态获取数据库最新日期
+    │  cached_query()    → Redis / 内存 5 分钟缓存
     ▼
-前端 (dashboard.html)
-    │  Promise.all() 并行请求所有 API
-    │  ECharts 渲染图表
-    │  setInterval 10 分钟自动刷新
+routes/dashboard.py   → 8 个看板 API
+routes/reports.py     → T1～T13 报表 API
     ▼
-浏览器展示
+前端（ECharts 图表 + 10 分钟自动刷新）
 ```
 
-## 看板模块
-
-看板包含 8 个数据模块：
+## 看板模块（`/`）
 
 | 模块 | API 端点 | 说明 |
 |------|----------|------|
@@ -53,36 +64,54 @@ Flask 后端 (app.py)
 | 门店排名 | `/api/store_rank` | 各分店当日销售额与毛利额横向对比 |
 | 品类分布 | `/api/category` | 生鲜/食品/非食品/耗材 四大品类环形图 |
 | 时段分析 | `/api/hourly` | 6:00-22:00 每小时销售额与客流分布 |
-| 热销 TOP15 | `/api/top_products` | 当日销售额前 15 的商品表格 |
-| 支付方式 | `/api/payment` | 微信/支付宝/现金/会员卡/银行卡 占比 |
+| 热销 TOP15 | `/api/top_products` | 当日销售额前 15 的商品 |
+| 客流日报 | `/api/daily_flow` | 各门店近 7 天客流、客单、销售、毛利 |
 | 门店趋势 | `/api/store_trend` | Top10 门店近 7 天销售额折线对比 |
 
-## 数据库核心表
+## 报表中心（`/reports`）
 
-看板主要使用以下 4 张表：
-
-| 表名 | 用途 | 关键字段 |
-|------|------|----------|
-| `tb_o_sg` | 销售明细（主表） | `c_id`, `c_datetime`, `c_amount`, `c_at_cost`, `c_qtty`, `c_gcode`, `c_store_id`, `c_type` |
-| `tb_o_sm` | 收款明细 | `c_datetime`, `c_type`, `c_amount` |
-| `tb_gds` | 商品档案 | `c_gcode`, `c_adno`, `c_name`, `c_ccode` |
-| `tb_store` | 门店信息 | `c_id`, `c_name`, `c_type` |
-
-完整表结构文档见 [db_tables.md](db_tables.md)。
+| 报表 | API 端点 | 说明 |
+|------|----------|------|
+| T1 销售客单按时段 | `/api/t1_sale_bytime` | 分时段客流、客单、销售额 |
+| T3 品类销售分析 | `/api/t3_category_analysis` | 品类销售、毛利、动销率 |
+| T4 销售时段对比 | `/api/t4_sale_compare` | 两个时间段时段对比 |
+| T5 畅销缺货 | `/api/t5_stockout` | 库存不足预警 |
+| T6 商品销售分析 | `/api/t6_product_sales` | 单品销量、毛利、库存 |
+| T7 供应商到货率 | `/api/t7_supplier_delivery` | 订货 vs 到货 |
+| T8 负毛利 | `/api/t8_negative_margin` | 负毛利商品明细 |
+| T9 高库存低周转 | `/api/t9_high_inventory` | 滞压库存预警 |
+| T10 新品报表 | `/api/t10_new_products` | 新品销售追踪 |
+| T11.1 供应商动销率 | `/api/t11_supplier_movement` | 供应商品项动销情况 |
+| T11.2 品类动销率 | `/api/t11_2_category_movement` | 品类动销分布 |
+| T12 品态异常 | `/api/t12_abnormal_status` | 库存状态异常商品 |
+| T13 滞销商品 | `/api/t13_slow_moving` | 销量/销额末位商品 |
 
 ## 运行方式
 
-### 1. 安装依赖
+### 1. 安装系统依赖（macOS）
+
+需要先安装 Microsoft ODBC Driver 17 for SQL Server：
 
 ```bash
-pip install flask pyodbc
+brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql17
 ```
 
-系统需安装 [ODBC Driver 17 for SQL Server](https://learn.microsoft.com/zh-cn/sql/connect/odbc/download-odbc-driver-for-sql-server)。
+验证：
 
-### 2. 配置数据库连接
+```bash
+odbcinst -q -d -n "ODBC Driver 17 for SQL Server"
+```
 
-编辑 `app.py` 顶部的 `DB_CONFIG`：
+### 2. 安装 Python 依赖
+
+```bash
+pip3 install -r requirements.txt
+```
+
+### 3. 配置数据库连接
+
+编辑 `db.py` 顶部的 `DB_CONFIG`：
 
 ```python
 DB_CONFIG = {
@@ -94,31 +123,24 @@ DB_CONFIG = {
 }
 ```
 
-### 3. 启动
+### 4. 启动
 
 ```bash
-python app.py
+python3 app.py
 ```
 
-### 4. 访问
+### 5. 访问
 
-浏览器打开 http://localhost:5000
+| 页面 | 地址 |
+|------|------|
+| 运营看板 | http://localhost:5001 |
+| 报表中心 | http://localhost:5001/reports |
 
 ## 配置说明
 
-| 配置项 | 位置 | 默认值 | 说明 |
+| 配置项 | 文件 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `CACHE_TTL` | `app.py:40` | `300` | 后端缓存有效期（秒） |
-| `port` | `app.py:382` | `5000` | Flask 服务端口 |
-| `host` | `app.py:382` | `0.0.0.0` | 监听地址（0.0.0.0 允许局域网访问） |
-| `setInterval` | `dashboard.html:513` | `600000` | 前端自动刷新间隔（毫秒，10 分钟） |
-| `debug` | `app.py:382` | `True` | Flask 调试模式（生产环境应关闭） |
-
-ngrok authtoken:
-3AIDX0j3V3151db0FSJodmvADbV_6wt3yhCe4t5YrozWKGnc4
-
-app.py里面，现在 get_latest_date() 直接返回 "2024-09-08"，原有的动态查询逻辑完整保留在下方，用 # pylint: disable=unreachable 压制 unreachable 警告。
-后续正式上线时，只需：
-删除 return "2024-09-08" 那一行
-删除 # pylint: disable=unreachable 注释
-动态查询逻辑自动生效
+| `DB_CONFIG` | `db.py` | — | 数据库连接信息 |
+| `CACHE_TTL` | `db.py` | `300` | 缓存有效期（秒） |
+| `port` | `app.py` | `5001` | Flask 服务端口 |
+| `T1_TEST_DATES` | `templates/reports.html` | 固定日期 | 改为 `null` 后自动取当天 |

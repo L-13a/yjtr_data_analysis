@@ -776,6 +776,10 @@ function exportCSV() {
 // ============================================================
 // Init
 // ============================================================
+function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
 async function init() {
     // Load stores
     try {
@@ -802,6 +806,25 @@ async function init() {
     renderSubTabs();
     renderFilters();
     clearContent();
+
+    // T1 开页自动加载
+    if (currentReport === 't1') {
+        // 自动选中倾城店
+        const storeEl = document.getElementById('f_store');
+        if (storeEl && T1_AUTO_STORE) {
+            const match = storeList.find(s => s.name.includes(T1_AUTO_STORE));
+            if (match) storeEl.value = match.id;
+        }
+        // 日期：测试用固定区间；将 T1_TEST_DATES 改为 null 后自动改为当天
+        const dates = T1_TEST_DATES || { start: todayStr(), end: todayStr() };
+        document.getElementById('f_start').value = dates.start;
+        document.getElementById('f_end').value   = dates.end;
+        const rangeEl = document.getElementById('range_start');
+        if (rangeEl && rangeEl._flatpickr) {
+            rangeEl._flatpickr.setDate([dates.start, dates.end]);
+        }
+        await loadReport();
+    }
 }
 
 init();

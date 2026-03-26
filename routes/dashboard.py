@@ -1,84 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-宜家天润超市 - 运营决策看板
-Flask后端：连接SQL Server，提供数据API
+看板首页 API（8 个固定指标 + 页面路由）
 """
-from flask import Flask, jsonify, render_template
-import pyodbc
-from datetime import datetime, timedelta
-from functools import lru_cache
-import time
+from flask import Blueprint, jsonify, render_template
 
-app = Flask(__name__)
+from db import cached_query, get_conn, get_latest_date
 
-# 数据库配置
-DB_CONFIG = {
-    "driver": "{ODBC Driver 17 for SQL Server}",
-    "server": "tag.qyyjtr.com,6899",
-    "database": "enjoy_shq_test",
-    "uid": "rou_9999",
-    "pwd": "kl87ngG@f",
-}
+bp = Blueprint("dashboard", __name__)
 
 
-def get_conn():
-    conn_str = (
-        f"DRIVER={DB_CONFIG['driver']};"
-        f"SERVER={DB_CONFIG['server']};"
-        f"DATABASE={DB_CONFIG['database']};"
-        f"UID={DB_CONFIG['uid']};"
-        f"PWD={DB_CONFIG['pwd']};"
-        f"TrustServerCertificate=yes;"
-        f"LoginTimeout=15;"
-    )
-    return pyodbc.connect(conn_str, timeout=30)
-
-
-# 缓存：获取数据库中的最新日期（作为"今天"）
-_cache = {}
-_cache_time = {}
-CACHE_TTL = 300  # 5分钟缓存
-
-
-def cached_query(key, query_func):
-    now = time.time()
-    if key in _cache and now - _cache_time.get(key, 0) < CACHE_TTL:
-        return _cache[key]
-    result = query_func()
-    _cache[key] = result
-    _cache_time[key] = now
-    return result
-
-
-def get_latest_date():
-    # TODO: 测试阶段写死日期，待数据补全后改为动态查询（取消注释 _query 并 return cached_query(...)）
-    return "2024-09-08"
-
-    # pylint: disable=unreachable
-    def _query():
-        conn = get_conn()
-        cursor = conn.cursor()
-        # 找到最近一个完整营业日（跳过不完整天和零星测试/退货记录）
-        cursor.execute("""
-            SELECT TOP 1 CONVERT(varchar, c_datetime, 23) as dt
-            FROM tb_o_sg
-            WHERE c_type = N'销售'
-            GROUP BY CONVERT(varchar, c_datetime, 23)
-            HAVING SUM(c_amount) > 0 AND COUNT(DISTINCT c_id) >= 1000
-            ORDER BY dt DESC
-        """)
-        r = cursor.fetchone()
-        conn.close()
-        return r[0] if r else "2024-09-08"
-    return cached_query("latest_date", _query)
-
-
-@app.route("/")
+@bp.route("/")
 def index():
     return render_template("dashboard.html")
 
 
-@app.route("/api/overview")
+@bp.route("/reports")
+def reports_page():
+    return render_template("reports.html")
+
+
+@bp.route("/api/overview")
 def api_overview():
     """今日核心KPI + 昨日对比"""
     def _query():
@@ -86,7 +27,6 @@ def api_overview():
         cursor = conn.cursor()
         latest = get_latest_date()
 
-        # 今日销售
         cursor.execute("""
             SELECT COUNT(DISTINCT c_id) as bill_count,
                    SUM(c_amount) as total_sales,
@@ -98,7 +38,6 @@ def api_overview():
         """, latest)
         today = cursor.fetchone()
 
-        # 昨日
         cursor.execute("""
             SELECT COUNT(DISTINCT c_id) as bill_count,
                    SUM(c_amount) as total_sales,
@@ -108,7 +47,6 @@ def api_overview():
               AND c_type = N'销售' AND c_amount > 0
         """, latest)
         yesterday = cursor.fetchone()
-
         conn.close()
 
         today_sales = float(today[1] or 0)
@@ -134,7 +72,7 @@ def api_overview():
     return jsonify(cached_query("overview", _query))
 
 
-@app.route("/api/trend")
+@bp.route("/api/trend")
 def api_trend():
     """近30天销售趋势"""
     def _query():
@@ -164,7 +102,7 @@ def api_trend():
     return jsonify(cached_query("trend", _query))
 
 
-@app.route("/api/store_rank")
+@bp.route("/api/store_rank")
 def api_store_rank():
     """门店销售排名"""
     def _query():
@@ -195,7 +133,7 @@ def api_store_rank():
     return jsonify(cached_query("store_rank", _query))
 
 
-@app.route("/api/category")
+@bp.route("/api/category")
 def api_category():
     """品类销售分布"""
     def _query():
@@ -235,7 +173,7 @@ def api_category():
     return jsonify(cached_query("category", _query))
 
 
-@app.route("/api/hourly")
+@bp.route("/api/hourly")
 def api_hourly():
     """时段销售分布"""
     def _query():
@@ -265,7 +203,7 @@ def api_hourly():
     return jsonify(cached_query("hourly", _query))
 
 
-@app.route("/api/top_products")
+@bp.route("/api/top_products")
 def api_top_products():
     """热销商品TOP15"""
     def _query():
@@ -296,53 +234,64 @@ def api_top_products():
     return jsonify(cached_query("top_products", _query))
 
 
-@app.route("/api/payment")
-def api_payment():
-    """支付方式分布(基于tb_o_sm)"""
+@bp.route("/api/daily_flow")
+def api_daily_flow():
+    """总客流日报（T2）"""
     def _query():
         conn = get_conn()
         cursor = conn.cursor()
         latest = get_latest_date()
         cursor.execute("""
-            SELECT c_type,
-                   COUNT(*) as cnt,
-                   SUM(c_amount) as total
-            FROM tb_o_sm
-            WHERE CONVERT(varchar, c_datetime, 23) = ?
-            GROUP BY c_type
-            ORDER BY total DESC
-        """, latest)
+            SELECT CONVERT(varchar(10), a.c_datetime, 23) AS dt,
+                   CASE DATEPART(WEEKDAY, a.c_datetime)
+                       WHEN 1 THEN N'日' WHEN 2 THEN N'一' WHEN 3 THEN N'二'
+                       WHEN 4 THEN N'三' WHEN 5 THEN N'四' WHEN 6 THEN N'五'
+                       WHEN 7 THEN N'六' ELSE N''
+                   END AS weekday,
+                   a.c_store_id AS store_id,
+                   b.c_name AS store_name,
+                   COUNT(DISTINCT a.c_id) AS flow_count,
+                   CASE WHEN COUNT(DISTINCT a.c_id) > 0
+                        THEN SUM(a.c_amount) * 1.0 / COUNT(DISTINCT a.c_id)
+                        ELSE NULL END AS avg_ticket,
+                   SUM(a.c_amount) AS sales,
+                   SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
+                   CASE WHEN SUM(a.c_amount) = 0 THEN NULL
+                        ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
+            FROM tb_o_sg a
+            LEFT JOIN tb_store b ON a.c_store_id = b.c_id
+            WHERE CONVERT(varchar(10), a.c_datetime, 23) >= CONVERT(varchar(10), DATEADD(day, -7, ?), 23)
+              AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
+              AND a.c_id NOT LIKE '-%%'
+              AND ISNULL(a.c_adno, '') <> '14'
+              AND a.c_computer_id <> 0
+            GROUP BY CONVERT(varchar(10), a.c_datetime, 23), DATEPART(WEEKDAY, a.c_datetime),
+                     a.c_store_id, b.c_name
+            ORDER BY dt DESC, a.c_store_id
+        """, latest, latest)
         rows = cursor.fetchall()
         conn.close()
-
-        # 合并小类
-        merged = {}
-        for r in rows:
-            pay_type = r[0] or "其他"
-            # 简化支付名称
-            if "微信" in pay_type:
-                key = "微信"
-            elif "支付宝" in pay_type:
-                key = "支付宝"
-            elif "现金" in pay_type:
-                key = "现金"
-            elif "贵宾" in pay_type or "会员" in pay_type:
-                key = "会员卡"
-            elif "银联" in pay_type or "信用卡" in pay_type:
-                key = "银行卡"
-            else:
-                key = "其他"
-            merged[key] = merged.get(key, 0) + float(r[2] or 0)
-
-        sorted_items = sorted(merged.items(), key=lambda x: -x[1])
         return {
-            "types": [i[0] for i in sorted_items],
-            "amounts": [round(i[1], 2) for i in sorted_items],
+            "rows": [
+                {
+                    "date": r[0],
+                    "weekday": r[1] or "",
+                    "store_id": r[2] or "",
+                    "store_name": r[3] or r[2] or "",
+                    "flow_count": r[4] or 0,
+                    "avg_ticket": round(float(r[5] or 0), 2),
+                    "sales": round(float(r[6] or 0), 2),
+                    "profit": round(float(r[7] or 0), 2),
+                    "profit_rate": round(float(r[8] or 0) * 100, 2) if r[8] is not None else None,
+                }
+                for r in rows
+            ],
+            "date_range": [latest, latest],
         }
-    return jsonify(cached_query("payment", _query))
+    return jsonify(cached_query("daily_flow", _query))
 
 
-@app.route("/api/store_trend")
+@bp.route("/api/store_trend")
 def api_store_trend():
     """各门店近7天趋势"""
     def _query():
@@ -375,20 +324,20 @@ def api_store_trend():
         dates = sorted(dates_set)
         series = []
         for store, data in sorted(stores_data.items(), key=lambda x: -sum(x[1].values())):
-            series.append({
-                "name": store,
-                "data": [data.get(d, 0) for d in dates]
-            })
+            series.append({"name": store, "data": [data.get(d, 0) for d in dates]})
 
-        return {"dates": dates, "series": series[:10]}  # Top10门店
+        return {"dates": dates, "series": series[:10]}
     return jsonify(cached_query("store_trend", _query))
 
 
-if __name__ == "__main__":
-    print("=" * 50)
-    print("宜家天润超市 运营决策看板")
-    print("=" * 50)
-    print("正在启动服务...")
-    print("打开浏览器访问: http://localhost:5000")
-    print("=" * 50)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+@bp.route("/api/stores")
+def api_stores():
+    """门店列表"""
+    def _query():
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT c_id, c_name FROM tb_store WHERE c_type=N'分店' AND c_status=N'正常营业' ORDER BY c_id")
+        rows = cursor.fetchall()
+        conn.close()
+        return [{"id": r[0], "name": r[1]} for r in rows]
+    return jsonify(cached_query("stores", _query))
