@@ -50,20 +50,33 @@ except Exception:
     print("[cache] Redis 不可用，降级为内存缓存")
 
 
+def _run_with_retry(query_func, retries=3, delay=2):
+    last_err = None
+    for attempt in range(retries):
+        try:
+            return query_func()
+        except pyodbc.OperationalError as e:
+            last_err = e
+            if attempt < retries - 1:
+                print(f"[db] 连接错误，{delay}s 后重试 (attempt {attempt+1}/{retries}): {e}")
+                time.sleep(delay)
+    raise last_err
+
+
 def cached_query(key, query_func, ttl=CACHE_TTL):
     rkey = REDIS_PREFIX + key
     if _redis_available:
         cached = _redis.get(rkey)
         if cached:
             return json.loads(cached)
-        result = query_func()
+        result = _run_with_retry(query_func)
         _redis.setex(rkey, ttl, json.dumps(result, ensure_ascii=False, default=str))
         return result
     else:
         now = time.time()
         if key in _cache and now - _cache_time.get(key, 0) < ttl:
             return _cache[key]
-        result = query_func()
+        result = _run_with_retry(query_func)
         _cache[key] = result
         _cache_time[key] = time.time()
         return result

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>宜家天润超市 - 运营决策看板</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script>if (typeof echarts === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"><\/script>')</script>
     <style>
@@ -136,13 +137,7 @@
         /* Chart Panels */
         .charts-row {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 16px;
-        }
-
-        .charts-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 16px;
         }
 
@@ -153,12 +148,42 @@
             border: 1px solid #1e3a5f;
         }
 
-        .chart-panel h3 {
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1e3a5f44;
+        }
+
+        .panel-header h3 {
+            font-size: 15px;
+            color: #90caf9;
+            margin: 0;
+        }
+
+        .chart-panel > h3 {
             font-size: 15px;
             color: #90caf9;
             margin-bottom: 12px;
             padding-bottom: 8px;
             border-bottom: 1px solid #1e3a5f44;
+        }
+
+        .store-filter {
+            background: #0f1923;
+            border: 1px solid #1e3a5f;
+            color: #90caf9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .store-filter:focus {
+            border-color: #4fc3f7;
         }
 
         .chart-container {
@@ -272,8 +297,7 @@
                 grid-template-columns: repeat(3, 1fr);
             }
 
-            .charts-row,
-            .charts-row-3 {
+            .charts-row {
                 grid-template-columns: 1fr;
             }
         }
@@ -346,7 +370,7 @@
     </div>
 
     <div class="dashboard">
-        <!-- KPI Cards -->
+        <!-- Row 1: KPI Cards -->
         <div class="kpi-row" id="kpiRow">
             <div class="kpi-card">
                 <div class="kpi-label">今日销售额</div>
@@ -375,42 +399,60 @@
             </div>
         </div>
 
-        <!-- Row 2: 30-day trend  -->
-        <div class="charts-row">
-            <div class="chart-panel">
-                <h3>近30天销售趋势</h3>
-                <div class="chart-container tall" id="trendChart"></div>
+        <!-- Row 2: 各时段总客流（全宽） -->
+        <div class="chart-panel">
+            <h3>各时段总客流</h3>
+            <div class="chart-container" id="hourlyChart"></div>
+        </div>
+
+        <!-- Row 3: 热销商品（全宽，右上角门店筛选器） -->
+        <div class="chart-panel">
+            <div class="panel-header">
+                <h3>热销商品 TOP 15</h3>
+                <select class="store-filter" id="topProductsStoreFilter">
+                    <option value="">全部门店</option>
+                </select>
+            </div>
+            <div id="topProducts">
+                <div class="loading">加载中</div>
             </div>
         </div>
 
-        <!-- Row 3: Store rank + Category + Hourly -->
-        <div class="charts-row-3">
+        <!-- Row 4: 品类销售(1/2) + 品类时段客流(1/2) -->
+        <div class="charts-row">
             <div class="chart-panel">
-                <h3>门店销售排名</h3>
-                <div class="chart-container tall" id="storeChart"></div>
-            </div>
-            <div class="chart-panel">
-                <h3>品类销售分布</h3>
+                <div class="panel-header">
+                    <h3>品类销售分布</h3>
+                    <select class="store-filter" id="categoryStoreFilter">
+                        <option value="">全部门店</option>
+                    </select>
+                </div>
                 <div class="chart-container tall" id="categoryChart"></div>
             </div>
             <div class="chart-panel">
-                <h3>时段客流分析</h3>
-                <div class="chart-container tall" id="hourlyChart"></div>
+                <h3 id="categoryHourlyTitle">品类时段客流分布 <span style="color:#78909c;font-size:12px;font-weight:normal">（点击左侧环形图选择品类）</span></h3>
+                <div class="chart-container tall" id="categoryHourlyChart">
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#546e7a;font-size:14px;">点击左侧环形图选择品类</div>
+                </div>
             </div>
         </div>
 
-        <!-- Row 4: Top products + Store trend -->
-        <div class="charts-row">
-            <div class="chart-panel">
-                <h3>热销商品 TOP 15</h3>
-                <div id="topProducts">
-                    <div class="loading">加载中</div>
-                </div>
-            </div>
-            <div class="chart-panel">
-                <h3>门店近7天销售额趋势</h3>
-                <div class="chart-container tall" id="storeTrendChart"></div>
-            </div>
+        <!-- Row 5: 门店近7天销售额趋势（全宽） -->
+        <div class="chart-panel">
+            <h3>门店近7天销售额趋势</h3>
+            <div class="chart-container tall" id="storeTrendChart"></div>
+        </div>
+
+        <!-- Row 6: 近30天销售趋势（全宽） -->
+        <div class="chart-panel">
+            <h3>近30天销售趋势</h3>
+            <div class="chart-container tall" id="trendChart"></div>
+        </div>
+
+        <!-- Row 6: 门店销售排名（全宽） -->
+        <div class="chart-panel">
+            <h3>门店销售排名</h3>
+            <div class="chart-container" id="storeChart"></div>
         </div>
     </div>
 
@@ -437,6 +479,9 @@
         // Theme colors
         const colors = ['#4fc3f7', '#66bb6a', '#ffa726', '#ab47bc', '#ef5350', '#26c6da', '#ffca28', '#8d6e63', '#78909c', '#ec407a'];
 
+        // State for category hourly drill-down
+        let currentCategory = null;
+
         function initChart(id) {
             const dom = document.getElementById(id);
             if (!dom || typeof echarts === 'undefined') return null;
@@ -445,6 +490,46 @@
             if (existing) existing.dispose();
             return echarts.init(dom, null, { renderer: 'canvas' });
         }
+
+        // ========== Store filter for top products ==========
+        async function loadStores() {
+            try {
+                const data = await fetch('/api/stores').then(r => r.json());
+                const selectors = ['topProductsStoreFilter', 'categoryStoreFilter'];
+                selectors.forEach(selId => {
+                    const sel = document.getElementById(selId);
+                    data.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.name;
+                        sel.appendChild(opt);
+                    });
+                });
+            } catch (e) { console.error('loadStores', e); }
+        }
+
+        async function loadTopProducts(storeId) {
+            const url = storeId ? `/api/top_products?store_id=${encodeURIComponent(storeId)}` : '/api/top_products';
+            const data = await fetch(url).then(r => r.json());
+            renderTopProducts(data);
+        }
+
+        document.getElementById('topProductsStoreFilter').addEventListener('change', function () {
+            loadTopProducts(this.value);
+        });
+
+        async function loadCategory(storeId) {
+            const url = storeId ? `/api/category?store_id=${encodeURIComponent(storeId)}` : '/api/category';
+            const data = await fetch(url).then(r => r.json());
+            renderCategory(data);
+            if (currentCategory) {
+                await loadCategoryHourly(currentCategory, storeId);
+            }
+        }
+
+        document.getElementById('categoryStoreFilter').addEventListener('change', function () {
+            loadCategory(this.value);
+        });
 
         // ========== Load Data ==========
         async function loadAll() {
@@ -474,9 +559,9 @@
                 document.getElementById('kpiBills').innerHTML = fmt(overview.bills) + '<span class="kpi-unit">笔</span>';
                 document.getElementById('kpiBillsChange').innerHTML = changeHtml(overview.bills_change);
                 document.getElementById('kpiTicket').innerHTML = overview.avg_ticket.toFixed(1) + '<span class="kpi-unit">元</span>';
-                document.getElementById('kpiTicketSub').innerHTML = `<span style="color:#78909c">会员消费 ${overview.members} 人</span>`;
+                document.getElementById('kpiTicketSub').innerHTML = changeHtml(overview.avg_ticket_change);
                 document.getElementById('kpiProfitRate').innerHTML = overview.profit_rate.toFixed(1) + '<span class="kpi-unit">%</span>';
-                document.getElementById('kpiMembers').innerHTML = `<span style="color:#78909c">毛利率</span>`;
+                document.getElementById('kpiMembers').innerHTML = changeHtml(overview.profit_rate_change, 'pp');
 
                 // Render charts (each independent so one failure won't block others)
                 renderTopProducts(topProducts);
@@ -550,6 +635,11 @@
         }
 
         function renderStoreRank(data) {
+            // 根据门店数量动态设置图表高度
+            const storeCount = data.stores.length;
+            const el = document.getElementById('storeChart');
+            el.style.height = Math.max(260, storeCount * 36 + 60) + 'px';
+
             const chart = initChart('storeChart');
             if (!chart) return;
             const stores = data.stores.slice().reverse();
@@ -596,6 +686,71 @@
                     itemStyle: { borderColor: '#0f1923', borderWidth: 3 },
                     color: ['#ef5350', '#ffa726', '#4fc3f7', '#66bb6a', '#78909c']
                 }]
+            });
+            chart.off('click');
+            chart.on('click', async function(params) {
+                currentCategory = params.name;
+                const storeId = document.getElementById('categoryStoreFilter').value;
+                await loadCategoryHourly(currentCategory, storeId);
+            });
+        }
+
+        async function loadCategoryHourly(category, storeId) {
+            let url = `/api/category_hourly?category=${encodeURIComponent(category)}`;
+            if (storeId) url += `&store_id=${encodeURIComponent(storeId)}`;
+            try {
+                const data = await fetch(url).then(r => r.json());
+                renderCategoryHourly(data);
+            } catch(e) {}
+        }
+
+        function renderCategoryHourly(data) {
+            const el = document.getElementById('categoryHourlyChart');
+            if (!el) return;
+            // clear placeholder text before init
+            if (!echarts.getInstanceByDom(el)) el.innerHTML = '';
+            const chart = initChart('categoryHourlyChart');
+            if (!chart) return;
+            document.getElementById('categoryHourlyTitle').innerHTML =
+                `${data.category} · 各时段客流分布`;
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: p => {
+                        let s = p[0].axisValue + '<br/>';
+                        p.forEach(i => {
+                            const val = i.seriesName === '客流'
+                                ? i.value + '笔'
+                                : (i.value / 10000).toFixed(2) + '万元';
+                            s += `${i.marker} ${i.seriesName}: ${val}<br/>`;
+                        });
+                        return s;
+                    }
+                },
+                legend: { data: ['客流', '销售额'], textStyle: { color: '#78909c' }, top: 0 },
+                grid: { left: 55, right: 60, top: 35, bottom: 30 },
+                xAxis: {
+                    type: 'category', data: data.hours, axisLabel: { color: '#546e7a' },
+                    axisLine: { lineStyle: { color: '#1e3a5f' } }
+                },
+                yAxis: [
+                    { type: 'value', name: '客流(笔)', axisLabel: { color: '#546e7a' }, splitLine: { lineStyle: { color: '#1e3a5f44' } }, nameTextStyle: { color: '#546e7a' } },
+                    { type: 'value', name: '销售额', axisLabel: { color: '#546e7a', formatter: v => (v / 10000).toFixed(1) + '万' }, splitLine: { show: false }, nameTextStyle: { color: '#546e7a' } }
+                ],
+                series: [
+                    {
+                        name: '客流', type: 'bar', data: data.bills,
+                        itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#66bb6a' }, { offset: 1, color: '#2e7d32' }
+                        ]) },
+                        barWidth: '50%'
+                    },
+                    {
+                        name: '销售额', type: 'line', yAxisIndex: 1, data: data.sales,
+                        lineStyle: { color: '#ffa726', width: 2 }, itemStyle: { color: '#ffa726' },
+                        symbol: 'circle', symbolSize: 4, smooth: true
+                    }
+                ]
             });
         }
 
@@ -729,6 +884,7 @@
         });
 
         // Load and auto-refresh
+        loadStores();
         loadAll();
         setInterval(loadAll, 600000); // 10min refresh
     </script>

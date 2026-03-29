@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>运营报表中心 - 宜家天润超市</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <style>
@@ -178,7 +179,6 @@
     <h1>运营报表中心</h1>
     <div class="nav">
         <a href="/">返回看板</a>
-        <a href="/report2">客流日报</a>
     </div>
 </div>
 
@@ -396,6 +396,12 @@ const GROUPS = {
     supplier: { label: '供应商分析', reports: ['t7','t11'] }
 };
 
+// T1 开页自动加载配置
+// T1_AUTO_STORE: 自动选中的门店名称关键字，null 则不自动选
+// T1_TEST_DATES: 测试用固定日期，null 则使用当天
+const T1_AUTO_STORE = '倾城';
+const T1_TEST_DATES = { start: '2024-09-08', end: '2024-09-09' };
+
 // Filter definitions
 const FILTER_DEFS = {
     store:     { label: '机构', type: 'select', default: '11021' },
@@ -417,6 +423,7 @@ let currentGroup = 'sales';
 let currentReport = 't1';
 let storeList = [];
 let lastData = [];
+const reportStates = {};  // 各报表的筛选条件和数据快照
 
 // ============================================================
 // Formatting helpers
@@ -467,7 +474,7 @@ function renderSubTabs() {
             currentReport = el.dataset.report;
             renderSubTabs();
             renderFilters();
-            clearContent();
+            if (!restoreState(currentReport)) clearContent();
         });
     });
 }
@@ -609,6 +616,62 @@ function applyPreset(preset, startId, endId) {
     if (rangeEl && rangeEl._flatpickr) rangeEl._flatpickr.setDate([s, e]);
 }
 
+function saveState(reportId) {
+    const report = REPORTS[reportId];
+    if (!report) return;
+    const filters = {};
+    report.filters.forEach(fid => {
+        const el = document.getElementById('f_' + fid);
+        if (el) filters[fid] = el.value;
+    });
+    reportStates[reportId] = {
+        filters,
+        data: lastData.slice(),
+        rowCount: document.getElementById('rowCount').textContent,
+        tableHTML: document.getElementById('tableWrap').innerHTML,
+        hasChart: !document.getElementById('chartArea').classList.contains('hidden')
+    };
+}
+
+function restoreState(reportId) {
+    const state = reportStates[reportId];
+    if (!state || !state.data.length) return false;
+    const report = REPORTS[reportId];
+    // 恢复筛选器
+    report.filters.forEach(fid => {
+        if (['start', 'end', 'cmp_start', 'cmp_end'].includes(fid)) return;
+        const el = document.getElementById('f_' + fid);
+        if (el && state.filters[fid] !== undefined) el.value = state.filters[fid];
+    });
+    // 恢复日期选择器
+    [['start', 'end'], ['cmp_start', 'cmp_end']].forEach(([startId, endId]) => {
+        if (!report.filters.includes(startId)) return;
+        const s = state.filters[startId];
+        const e = state.filters[endId];
+        if (!s || !e) return;
+        // 直接写隐藏 input，确保查询时参数正确
+        const sEl = document.getElementById('f_' + startId);
+        const eEl = document.getElementById('f_' + endId);
+        if (sEl) sEl.value = s;
+        if (eEl) eEl.value = e;
+        // 同步日历控件显示
+        const rangeEl = document.getElementById('range_' + startId);
+        if (rangeEl && rangeEl._flatpickr) rangeEl._flatpickr.setDate([s, e]);
+    });
+    // 恢复内容区（直接写回 HTML，不重新渲染表格）
+    document.getElementById('reportTitle').textContent = report.label;
+    document.getElementById('rowCount').textContent = state.rowCount;
+    document.getElementById('tableWrap').innerHTML = state.tableHTML;
+    lastData = state.data;
+    if (state.hasChart) {
+        document.getElementById('chartArea').classList.remove('hidden');
+        renderChart(reportId, state.data);  // 图表是 canvas，必须重绘
+    } else {
+        document.getElementById('chartArea').classList.add('hidden');
+    }
+    return true;
+}
+
 function clearContent() {
     document.getElementById('reportTitle').textContent = REPORTS[currentReport]?.label || '--';
     document.getElementById('rowCount').textContent = '';
@@ -744,6 +807,7 @@ async function loadReport() {
         document.getElementById('rowCount').textContent = `共 ${rows.length} 条记录`;
         renderTable(rows, report.columns);
         renderChart(currentReport, rows);
+        saveState(currentReport);
     } catch(e) {
         document.getElementById('tableWrap').innerHTML = `<div class="status-msg error">请求失败: ${e.message}</div>`;
     }
@@ -798,7 +862,7 @@ async function init() {
             currentReport = GROUPS[currentGroup].reports[0];
             renderSubTabs();
             renderFilters();
-            clearContent();
+            if (!restoreState(currentReport)) clearContent();
         });
     });
 
