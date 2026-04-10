@@ -194,10 +194,15 @@ def _query_hourly():
     hours = list(range(6, 23))
     sales_map = {r[0]: round(float(r[1] or 0), 2) for r in rows}
     bills_map = {r[0]: r[2] for r in rows}
+    avg_ticket_map = {
+        r[0]: round(float(r[1] or 0) / r[2], 2) if r[2] else 0
+        for r in rows
+    }
     return {
         "hours": [f"{h}:00" for h in hours],
         "sales": [sales_map.get(h, 0) for h in hours],
         "bills": [bills_map.get(h, 0) for h in hours],
+        "avg_ticket": [avg_ticket_map.get(h, 0) for h in hours],
     }
 
 
@@ -245,39 +250,72 @@ def _query_top_products(store_id=None):
     }
 
 
-def _query_daily_flow():
-    """总客流日报（T2）"""
+def _query_daily_flow(start=None, end=None):
+    """总客流日报（T2），支持自定义日期范围"""
     conn = get_conn()
     cursor = conn.cursor()
     latest = get_latest_date()
-    cursor.execute("""
-        SELECT CONVERT(varchar(10), a.c_datetime, 23) AS dt,
-               CASE DATEPART(WEEKDAY, a.c_datetime)
-                   WHEN 1 THEN N'日' WHEN 2 THEN N'一' WHEN 3 THEN N'二'
-                   WHEN 4 THEN N'三' WHEN 5 THEN N'四' WHEN 6 THEN N'五'
-                   WHEN 7 THEN N'六' ELSE N''
-               END AS weekday,
-               a.c_store_id AS store_id,
-               b.c_name AS store_name,
-               COUNT(DISTINCT a.c_id) AS flow_count,
-               CASE WHEN COUNT(DISTINCT a.c_id) > 0
-                    THEN SUM(a.c_amount) * 1.0 / COUNT(DISTINCT a.c_id)
-                    ELSE NULL END AS avg_ticket,
-               SUM(a.c_amount) AS sales,
-               SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
-               CASE WHEN SUM(a.c_amount) = 0 THEN NULL
-                    ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
-        FROM tb_o_sg a
-        LEFT JOIN tb_store b ON a.c_store_id = b.c_id
-        WHERE CONVERT(varchar(10), a.c_datetime, 23) >= CONVERT(varchar(10), DATEADD(day, -7, ?), 23)
-          AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
-          AND a.c_id NOT LIKE '-%%'
-          AND ISNULL(a.c_adno, '') <> '14'
-          AND a.c_computer_id <> 0
-        GROUP BY CONVERT(varchar(10), a.c_datetime, 23), DATEPART(WEEKDAY, a.c_datetime),
-                 a.c_store_id, b.c_name
-        ORDER BY dt DESC, a.c_store_id
-    """, latest, latest)
+    date_end   = end   if end   else latest
+    date_start = start if start else None
+    if date_start is None:
+        # 默认近7天
+        cursor.execute("""
+            SELECT CONVERT(varchar(10), a.c_datetime, 23) AS dt,
+                   CASE DATEPART(WEEKDAY, a.c_datetime)
+                       WHEN 1 THEN N'日' WHEN 2 THEN N'一' WHEN 3 THEN N'二'
+                       WHEN 4 THEN N'三' WHEN 5 THEN N'四' WHEN 6 THEN N'五'
+                       WHEN 7 THEN N'六' ELSE N''
+                   END AS weekday,
+                   a.c_store_id AS store_id,
+                   b.c_name AS store_name,
+                   COUNT(DISTINCT a.c_id) AS flow_count,
+                   CASE WHEN COUNT(DISTINCT a.c_id) > 0
+                        THEN SUM(a.c_amount) * 1.0 / COUNT(DISTINCT a.c_id)
+                        ELSE NULL END AS avg_ticket,
+                   SUM(a.c_amount) AS sales,
+                   SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
+                   CASE WHEN SUM(a.c_amount) = 0 THEN NULL
+                        ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
+            FROM tb_o_sg a
+            LEFT JOIN tb_store b ON a.c_store_id = b.c_id
+            WHERE CONVERT(varchar(10), a.c_datetime, 23) >= CONVERT(varchar(10), DATEADD(day, -7, ?), 23)
+              AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
+              AND a.c_id NOT LIKE '-%%'
+              AND ISNULL(a.c_adno, '') <> '14'
+              AND a.c_computer_id <> 0
+            GROUP BY CONVERT(varchar(10), a.c_datetime, 23), DATEPART(WEEKDAY, a.c_datetime),
+                     a.c_store_id, b.c_name
+            ORDER BY dt DESC, a.c_store_id
+        """, date_end, date_end)
+    else:
+        cursor.execute("""
+            SELECT CONVERT(varchar(10), a.c_datetime, 23) AS dt,
+                   CASE DATEPART(WEEKDAY, a.c_datetime)
+                       WHEN 1 THEN N'日' WHEN 2 THEN N'一' WHEN 3 THEN N'二'
+                       WHEN 4 THEN N'三' WHEN 5 THEN N'四' WHEN 6 THEN N'五'
+                       WHEN 7 THEN N'六' ELSE N''
+                   END AS weekday,
+                   a.c_store_id AS store_id,
+                   b.c_name AS store_name,
+                   COUNT(DISTINCT a.c_id) AS flow_count,
+                   CASE WHEN COUNT(DISTINCT a.c_id) > 0
+                        THEN SUM(a.c_amount) * 1.0 / COUNT(DISTINCT a.c_id)
+                        ELSE NULL END AS avg_ticket,
+                   SUM(a.c_amount) AS sales,
+                   SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
+                   CASE WHEN SUM(a.c_amount) = 0 THEN NULL
+                        ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
+            FROM tb_o_sg a
+            LEFT JOIN tb_store b ON a.c_store_id = b.c_id
+            WHERE CONVERT(varchar(10), a.c_datetime, 23) >= ?
+              AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
+              AND a.c_id NOT LIKE '-%%'
+              AND ISNULL(a.c_adno, '') <> '14'
+              AND a.c_computer_id <> 0
+            GROUP BY CONVERT(varchar(10), a.c_datetime, 23), DATEPART(WEEKDAY, a.c_datetime),
+                     a.c_store_id, b.c_name
+            ORDER BY dt DESC, a.c_store_id
+        """, date_start, date_end)
     rows = cursor.fetchall()
     conn.close()
     return {
@@ -373,19 +411,74 @@ def api_category():
     return jsonify(cached_query("category", _query_category))
 
 
-def _query_category_hourly(category, store_id=None):
-    """某品类各时段客流分布"""
-    CCODE_MAP = {'生鲜': '11', '食品': '22', '非食品': '33', '耗材/资产': '44'}
-    ccode_prefix = CCODE_MAP.get(category)
+# L2 品类代码 -> 名称映射
+_L2_CODE_MAP = {
+    # 生鲜 L2
+    '110': '熟食', '111': '水产', '112': '水果', '113': '面包',
+    '114': '精肉', '116': '生鲜场外专柜', '117': '蔬菜', '118': '蛋品',
+    # 食品 L2
+    '220': '烟酒饮料', '221': '休闲食品', '222': '营养冲调',
+    '223': '粮油调料', '224': '食品场外专柜', '225': '冷冻冷藏',
+    '226': '散装休闲/南北干货',
+    # 非食品 L2
+    '330': '洗化清洁', '331': '家用百货', '332': '文体休闲',
+    '333': '家电电器', '334': '针织针纺', '335': '非食场外专柜',
+}
+_L1_NAME_TO_CODE = {'生鲜': '11', '食品': '22', '非食品': '33', '耗材/资产': '44'}
+
+
+def _query_category_l2(l1_name, store_id=None):
+    """L2品类销售分布（按L1名称过滤）"""
+    l1_code = _L1_NAME_TO_CODE.get(l1_name)
+    if not l1_code:
+        return {"categories": [], "codes": [], "sales": [], "profit": []}
     conn = get_conn()
     cursor = conn.cursor()
     latest = get_latest_date()
-    if ccode_prefix:
-        ccode_filter = "AND LEFT(g.c_ccode, 2) = ?"
-        base_params = [latest, ccode_prefix]
+    store_filter = "AND s.c_store_id = ?" if store_id else ""
+    params = [latest, l1_code] + ([store_id] if store_id else [])
+    cursor.execute(f"""
+        SELECT LEFT(g.c_ccode, 3) as l2_code,
+               SUM(s.c_amount) as sales,
+               SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
+        FROM tb_o_sg s
+        JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+        WHERE CONVERT(varchar, s.c_datetime, 23) = ?
+          AND s.c_type = N'销售' AND s.c_amount > 0
+          AND LEFT(g.c_ccode, 2) = ?
+          {store_filter}
+        GROUP BY LEFT(g.c_ccode, 3)
+        ORDER BY sales DESC
+    """, *params)
+    rows = cursor.fetchall()
+    conn.close()
+    return {
+        "categories": [_L2_CODE_MAP.get(r[0], r[0]) for r in rows],
+        "codes": [r[0] for r in rows],
+        "sales": [round(float(r[1] or 0), 2) for r in rows],
+        "profit": [round(float(r[2] or 0), 2) for r in rows],
+    }
+
+
+def _query_category_hourly(category=None, ccode=None, store_id=None):
+    """某品类各时段客流分布。ccode（2或3位前缀）优先于 category 名称。"""
+    conn = get_conn()
+    cursor = conn.cursor()
+    latest = get_latest_date()
+    if ccode:
+        clen = len(ccode)
+        ccode_filter = f"AND LEFT(g.c_ccode, {clen}) = ?"
+        base_params = [latest, ccode]
+        display_name = _L2_CODE_MAP.get(ccode, category or ccode)
     else:
-        ccode_filter = "AND LEFT(g.c_ccode, 2) NOT IN ('11','22','33','44')"
-        base_params = [latest]
+        ccode_prefix = _L1_NAME_TO_CODE.get(category or '')
+        if ccode_prefix:
+            ccode_filter = "AND LEFT(g.c_ccode, 2) = ?"
+            base_params = [latest, ccode_prefix]
+        else:
+            ccode_filter = "AND LEFT(g.c_ccode, 2) NOT IN ('11','22','33','44')"
+            base_params = [latest]
+        display_name = category or ''
     store_filter = "AND s.c_store_id = ?" if store_id else ""
     params = base_params + ([store_id] if store_id else [])
     cursor.execute(f"""
@@ -407,7 +500,7 @@ def _query_category_hourly(category, store_id=None):
     bills_map = {r[0]: r[1] for r in rows}
     sales_map = {r[0]: round(float(r[2] or 0), 2) for r in rows}
     return {
-        "category": category,
+        "category": display_name,
         "hours": [f"{h}:00" for h in hours],
         "bills": [bills_map.get(h, 0) for h in hours],
         "sales": [sales_map.get(h, 0) for h in hours],
@@ -419,14 +512,25 @@ def api_hourly():
     return jsonify(cached_query("hourly", _query_hourly))
 
 
+@bp.route("/api/category_l2")
+def api_category_l2():
+    from flask import request
+    l1 = request.args.get('l1', '').strip()
+    store_id = request.args.get('store_id', '').strip() or None
+    if not l1:
+        return jsonify({"categories": [], "codes": [], "sales": [], "profit": []})
+    return jsonify(_query_category_l2(l1, store_id))
+
+
 @bp.route("/api/category_hourly")
 def api_category_hourly():
     from flask import request
-    category = request.args.get('category', '').strip()
+    category = request.args.get('category', '').strip() or None
+    ccode = request.args.get('ccode', '').strip() or None
     store_id = request.args.get('store_id', '').strip() or None
-    if not category:
-        return jsonify({"error": "category required", "hours": [], "bills": [], "sales": []})
-    return jsonify(_query_category_hourly(category, store_id))
+    if not category and not ccode:
+        return jsonify({"error": "category or ccode required", "hours": [], "bills": [], "sales": []})
+    return jsonify(_query_category_hourly(category=category, ccode=ccode, store_id=store_id))
 
 
 @bp.route("/api/top_products")
@@ -440,6 +544,11 @@ def api_top_products():
 
 @bp.route("/api/daily_flow")
 def api_daily_flow():
+    from flask import request
+    start = request.args.get('start', '').strip() or None
+    end   = request.args.get('end',   '').strip() or None
+    if start or end:
+        return jsonify(_query_daily_flow(start=start, end=end))
     return jsonify(cached_query("daily_flow", _query_daily_flow))
 
 

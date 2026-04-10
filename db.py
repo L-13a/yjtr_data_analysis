@@ -11,6 +11,8 @@ from datetime import date, datetime
 import pyodbc
 import redis
 
+pyodbc.pooling = False  # 禁用驱动层连接池，避免拿到已被防火墙断开的旧连接
+
 # ── 数据库配置 ────────────────────────────────────────────────
 DB_CONFIG = {
     "driver": "{ODBC Driver 17 for SQL Server}",

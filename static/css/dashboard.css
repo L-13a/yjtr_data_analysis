@@ -1,0 +1,237 @@
+/* ============================================================
+   dashboard.css — 运营决策看板专用样式
+   ============================================================ */
+
+.header {
+    padding: 16px 32px;
+}
+
+.header h1 {
+    font-size: 24px;
+    letter-spacing: 4px;
+}
+
+.header .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header .date-info {
+    font-size: 14px;
+    color: #78909c;
+    text-align: right;
+}
+
+.header .date-info .date-val {
+    color: #4fc3f7;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.dashboard {
+    padding: 16px;
+    display: grid;
+    gap: 16px;
+}
+
+/* KPI Cards */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.kpi-card {
+    background: linear-gradient(135deg, #1a2a3a 0%, #162436 100%);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #1e3a5f;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+}
+
+.kpi-card:nth-child(1)::before { background: linear-gradient(90deg, #4fc3f7, #039be5); }
+.kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #66bb6a, #43a047); }
+.kpi-card:nth-child(3)::before { background: linear-gradient(90deg, #ffa726, #f57c00); }
+.kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #ab47bc, #8e24aa); }
+.kpi-card:nth-child(5)::before { background: linear-gradient(90deg, #ef5350, #e53935); }
+
+.kpi-label {
+    font-size: 13px;
+    color: #78909c;
+    margin-bottom: 8px;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e0e6ed;
+}
+
+.kpi-change {
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.kpi-change.up   { color: #66bb6a; }
+.kpi-change.down { color: #ef5350; }
+
+.kpi-unit {
+    font-size: 14px;
+    color: #78909c;
+    margin-left: 4px;
+}
+
+/* Chart Panels */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.chart-panel {
+    background: linear-gradient(135deg, #1a2a3a 0%, #162436 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #1e3a5f;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1e3a5f44;
+}
+
+.panel-header h3 {
+    font-size: 15px;
+    color: #90caf9;
+    margin: 0;
+}
+
+.chart-panel > h3 {
+    font-size: 15px;
+    color: #90caf9;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1e3a5f44;
+}
+
+.store-filter {
+    background: #0f1923;
+    border: 1px solid #1e3a5f;
+    color: #90caf9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+}
+
+.store-filter:focus {
+    border-color: #4fc3f7;
+}
+
+.chart-container {
+    width: 100%;
+    height: 300px;
+    min-width: 0;
+}
+
+.chart-container.tall {
+    height: 400px;
+}
+
+/* Loading */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #546e7a;
+}
+
+
+/* Top Products Table */
+.product-table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: collapse;
+}
+
+.product-table th {
+    text-align: left;
+    color: #78909c;
+    padding: 6px 8px;
+    border-bottom: 1px solid #1e3a5f;
+    font-weight: 500;
+}
+
+.product-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #1e3a5f33;
+}
+
+.product-table tr:hover td {
+    background: #1e3a5f22;
+}
+
+.rank-badge {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.rank-1 { background: #ffd54f; color: #333; }
+.rank-2 { background: #b0bec5; color: #333; }
+.rank-3 { background: #a1887f; color: #fff; }
+.rank-n { background: #37474f; color: #90a4ae; }
+
+.profit-positive { color: #66bb6a; }
+.profit-negative { color: #ef5350; }
+
+.refresh-info {
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: #455a64;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .kpi-row     { grid-template-columns: repeat(3, 1fr); }
+    .charts-row  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .header               { padding: 12px 16px; flex-direction: column; gap: 8px; text-align: center; }
+    .header h1            { font-size: 18px; letter-spacing: 2px; }
+    .dashboard            { padding: 8px; gap: 10px; }
+    .kpi-row              { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi-card             { padding: 14px; }
+    .kpi-value            { font-size: 22px; }
+    .chart-panel          { padding: 12px; }
+    .chart-container      { height: 260px; min-width: 0; }
+    .chart-container.tall { height: 300px; }
+    .product-table        { font-size: 12px; }
+    .product-table th,
+    .product-table td     { padding: 5px 4px; }
+}

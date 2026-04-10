@@ -1,0 +1,242 @@
+/* ============================================================
+   reports.css — 运营报表中心专用样式
+   ============================================================ */
+
+.header {
+    padding: 14px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header h1 {
+    font-size: 20px;
+    letter-spacing: 3px;
+}
+
+
+/* Tab Bar */
+.tab-bar {
+    display: flex;
+    background: #162436;
+    border-bottom: 1px solid #1e3a5f;
+    padding: 0 16px;
+    overflow-x: auto;
+}
+
+.tab-bar .tab {
+    padding: 12px 20px;
+    font-size: 14px;
+    color: #78909c;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.tab-bar .tab:hover  { color: #b0bec5; }
+.tab-bar .tab.active { color: #4fc3f7; border-bottom-color: #4fc3f7; }
+
+/* Sub Tab Bar */
+.sub-tab-bar {
+    display: flex;
+    background: #1a2a3a;
+    border-bottom: 1px solid #1e3a5f33;
+    padding: 0 16px;
+    overflow-x: auto;
+}
+
+.sub-tab-bar .sub-tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #546e7a;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.sub-tab-bar .sub-tab:hover  { color: #90a4ae; }
+.sub-tab-bar .sub-tab.active { color: #66bb6a; border-bottom-color: #66bb6a; }
+
+/* Filter Bar */
+.filter-bar {
+    background: #162436;
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid #1e3a5f33;
+}
+
+.filter-bar label { font-size: 12px; color: #78909c; }
+
+.filter-bar select,
+.filter-bar input {
+    background: #1a2a3a;
+    border: 1px solid #1e3a5f;
+    color: #e0e6ed;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+}
+
+.filter-bar select:focus,
+.filter-bar input:focus { border-color: #4fc3f7; }
+
+.filter-bar input[type="date"] { width: 140px; }
+
+.filter-bar .btn {
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    color: #fff;
+    border: none;
+    padding: 7px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.filter-bar .btn:hover { opacity: 0.9; }
+
+/* Content Area */
+.content { padding: 16px; }
+
+.panel {
+    background: linear-gradient(135deg, #1a2a3a 0%, #162436 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #1e3a5f;
+    margin-bottom: 16px;
+}
+
+.panel h3 {
+    font-size: 15px;
+    color: #90caf9;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1e3a5f44;
+}
+
+/* Data Table */
+.table-wrap { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
+
+.data-table {
+    width: 100%;
+    font-size: 12px;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.data-table th {
+    text-align: left;
+    color: #78909c;
+    padding: 8px 10px;
+    border-bottom: 2px solid #1e3a5f;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    background: #1a2a3a;
+    z-index: 10;
+}
+
+.data-table td               { padding: 7px 10px; border-bottom: 1px solid #1e3a5f22; }
+.data-table tr:hover td      { background: #1e3a5f22; }
+.data-table .num             { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table .positive        { color: #66bb6a; }
+.data-table .negative        { color: #ef5350; }
+.data-table .summary-row td  { font-weight: 700; background: #1e3a5f33; border-top: 2px solid #1e3a5f; }
+
+/* Chart */
+.chart-container { width: 100%; height: 350px; }
+
+/* Status Messages */
+.status-msg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #546e7a;
+    font-size: 14px;
+}
+
+.status-msg.error { color: #ef5350; }
+
+.loading-spinner::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #1e3a5f;
+    border-top-color: #4fc3f7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 8px;
+}
+
+.row-count { font-size: 12px; color: #546e7a; margin-bottom: 8px; }
+
+.hidden { display: none !important; }
+
+/* Date Range Picker */
+.date-range-group  { display: flex; flex-direction: column; gap: 5px; }
+.date-range-label  { font-size: 12px; color: #78909c; }
+.date-presets      { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.preset-btn {
+    background: #1e3a5f;
+    color: #90caf9;
+    border: 1px solid #264d7a;
+    padding: 3px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+    transition: all 0.15s;
+    line-height: 1.6;
+}
+
+.preset-btn:hover { background: #29b6f6; color: #0a1929; border-color: #29b6f6; }
+
+.date-range-input {
+    background: #1a2a3a;
+    border: 1px solid #1e3a5f;
+    color: #e0e6ed;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    width: 210px;
+    cursor: pointer;
+}
+
+.date-range-input:focus { border-color: #4fc3f7; }
+
+/* Flatpickr 深色主题覆盖 */
+.flatpickr-calendar { background: #162436 !important; border: 1px solid #1e3a5f !important; box-shadow: 0 8px 30px rgba(0,0,0,.5) !important; }
+.flatpickr-months .flatpickr-month,
+.flatpickr-weekdays,
+span.flatpickr-weekday { background: #1a2a3a !important; color: #78909c !important; }
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year { background: transparent !important; color: #90caf9 !important; }
+.flatpickr-day { color: #b0bec5 !important; border-radius: 4px !important; }
+.flatpickr-day:hover,
+.flatpickr-day.inRange { background: #1e3a5f !important; border-color: #1e3a5f !important; color: #e0e6ed !important; }
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange { background: #1e88e5 !important; border-color: #1e88e5 !important; color: #fff !important; }
+.flatpickr-day.today       { border-color: #4fc3f7 !important; }
+.flatpickr-day.flatpickr-disabled { color: #37474f !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header             { padding: 10px 12px; flex-wrap: wrap; gap: 6px; }
+    .header h1          { font-size: 16px; }
+    .filter-bar         { padding: 8px 12px; gap: 8px; }
+    .content            { padding: 8px; }
+    .data-table         { font-size: 11px; }
+    .data-table th,
+    .data-table td      { padding: 5px 6px; }
+}

@@ -1,0 +1,59 @@
+/* ============================================================
+   base.css — 两个页面共用的基础样式
+   ============================================================ */
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, "Microsoft YaHei", sans-serif;
+    background: #0f1923;
+    color: #e0e6ed;
+    min-height: 100vh;
+}
+
+/* Header 共用骨架；各页面通过各自 CSS 覆盖 padding / 字号等差异 */
+.header {
+    background: linear-gradient(135deg, #1a2a3a 0%, #0d253a 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1e90ff33;
+}
+
+.header h1 {
+    font-weight: 700;
+    background: linear-gradient(90deg, #4fc3f7, #29b6f6, #039be5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Nav Button — 两个页面共用的导航按钮 */
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 16px;
+    border: 1px solid #4fc3f7;
+    border-radius: 20px;
+    color: #4fc3f7;
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+}
+
+.nav-btn:hover {
+    background: #4fc3f7;
+    color: #0f1923;
+    box-shadow: 0 0 10px #4fc3f755;
+    text-decoration: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
