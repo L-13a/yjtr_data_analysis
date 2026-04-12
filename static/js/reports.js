@@ -154,7 +154,7 @@ const REPORTS = {
         group: 'supplier', label: 'T7 供应商到货率', api: '/api/t7_supplier_delivery',
         filters: ['store','start','end','supplier'],
         columns: [
-            {key:'供应商号',label:'供应商号'},{key:'供应商名称',label:'供应商名称'},
+            {key:'供应商号',label:'供应商号',sticky:true},{key:'供应商名称',label:'供应商名称',sticky:true},
             {key:'销售额',label:'销售额',fmt:'money'},{key:'毛利',label:'毛利',fmt:'money'},
             {key:'毛利率',label:'毛利率',fmt:'pct'},{key:'品项数',label:'品项数',fmt:'int'},
             {key:'动销数',label:'动销数',fmt:'int'},{key:'动销率',label:'动销率',fmt:'pct'},
@@ -292,6 +292,13 @@ function renderFilters() {
                 html += `<option value="${s.id}" ${sel}>${s.name}(${s.id})</option>`;
             });
             html += `</select>`;
+        } else if (fid === 'ccode' && REPORTS[currentReport].group === 'category') {
+            html += `<select id="f_${fid}">
+                <option value="">全部</option>
+                <option value="11">生鲜</option>
+                <option value="22">食品</option>
+                <option value="33">非食品</option>
+            </select>`;
         } else if (def.type === 'select' && def.options) {
             html += `<select id="f_${fid}">`;
             def.options.forEach(o => {
@@ -435,22 +442,44 @@ function renderTable(data, columns) {
         wrap.innerHTML = '<div class="status-msg">暂无数据</div>';
         return;
     }
+    const hasStickyCol = columns.some(c => c.sticky);
+    const idxClass = hasStickyCol ? ' sticky-col' : '';
+
     let html = '<table class="data-table"><thead><tr>';
-    html += '<th>#</th>';
-    columns.forEach(c => { html += `<th class="${c.fmt?'num':''}">${c.label}</th>`; });
+    html += `<th class="${idxClass.trim()}">#</th>`;
+    columns.forEach(c => {
+        const cls = [c.fmt ? 'num' : '', c.sticky ? 'sticky-col' : ''].filter(Boolean).join(' ');
+        html += `<th class="${cls}">${c.label}</th>`;
+    });
     html += '</tr></thead><tbody>';
     data.forEach((row, i) => {
         const isSummary = row['时段'] === null && row['hours'] === null && i === data.length - 1;
         html += `<tr class="${isSummary?'summary-row':''}">`;
-        html += `<td>${isSummary ? '合计' : i+1}</td>`;
+        html += `<td class="${idxClass.trim()}">${isSummary ? '合计' : i+1}</td>`;
         columns.forEach(c => {
+            const cls = [c.fmt ? 'num' : '', c.sticky ? 'sticky-col' : ''].filter(Boolean).join(' ');
             const val = row[c.key];
-            html += `<td class="${c.fmt?'num':''}">${fmtVal(val, c.fmt, c.colored)}</td>`;
+            html += `<td class="${cls}">${fmtVal(val, c.fmt, c.colored)}</td>`;
         });
         html += '</tr>';
     });
     html += '</tbody></table>';
     wrap.innerHTML = html;
+
+    // Calculate and apply left offsets for sticky columns after DOM insertion
+    if (hasStickyCol) {
+        const headerCells = wrap.querySelectorAll('thead tr .sticky-col');
+        const lefts = [];
+        let acc = 0;
+        headerCells.forEach(cell => { lefts.push(acc); acc += cell.offsetWidth; });
+        const lastIdx = lefts.length - 1;
+        wrap.querySelectorAll('tr').forEach(tr => {
+            tr.querySelectorAll('.sticky-col').forEach((cell, i) => {
+                cell.style.left = (lefts[i] ?? 0) + 'px';
+                if (i === lastIdx) cell.classList.add('sticky-last');
+            });
+        });
+    }
 }
 
 // ============================================================
@@ -536,6 +565,9 @@ async function loadReport() {
         const el = document.getElementById('f_' + fid);
         if (el && el.value) params.set(fid, el.value);
     });
+    if (report.group === 'category' && params.get('ccode')) {
+        params.set('clevel', '2');
+    }
 
     try {
         const url  = report.api + '?' + params.toString();

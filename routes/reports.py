@@ -58,58 +58,84 @@ def api_t3():
     sql = """
     DECLARE @pclevel int, @pstart datetime, @pend datetime, @pccode varchar(1000), @pstore varchar(max)
     SELECT @pclevel=?, @pstart=?, @pend=?, @pstore=?, @pccode=?;
-    WITH temp00 AS(
+    WITH
+    -- 门店列表（只拆分一次，下方 CTE 均引用此处）
+    stores AS (
+        SELECT c_str AS store_id FROM dbo.uf_io_split_string(@pstore,',','store',1,default)
+    ),
+    -- 品项数 / 动销数（依赖表值函数）
+    gds_cnt AS (
         SELECT gc.c_ccode, gc.c_level, gc.c_name,
             COUNT(DISTINCT g.c_gcode) AS c_kind,
-            COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode ELSE NULL END) AS dongxiao,
-            ROUND(CAST(COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode ELSE NULL END) AS dec(12,2))/COUNT(DISTINCT g.c_gcode),4) AS dongxiaov,
-            COUNT(DISTINCT g.c_gcode)-COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode ELSE NULL END) AS budongxiao
+            COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode END) AS dongxiao,
+            ROUND(CAST(COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode END) AS dec(12,2))
+                  / NULLIF(COUNT(DISTINCT g.c_gcode),0), 4) AS dongxiaov,
+            COUNT(DISTINCT g.c_gcode)
+              - COUNT(DISTINCT CASE WHEN ISNULL(g.c_sale,0)<>0 THEN g.c_gcode END) AS budongxiao
         FROM tb_gdsclass gc
         CROSS APPLY dbo.io_get_gds_gcode_cnt(@pstore, gc.c_ccode, @pstart, @pend) g
         WHERE (ISNULL(@pclevel,'')='' OR gc.c_level=@pclevel)
-            AND (ISNULL(@pccode,'')='' OR gc.c_ccode = @pccode)
+            AND (ISNULL(@pccode,'')='' OR gc.c_ccode LIKE @pccode+'%')
             AND gc.c_ccode NOT LIKE '44%'
             AND g.c_sale_status NOT IN ('暂停销售')
             AND NOT (g.c_number=0 AND g.c_status IN ('暂停进货'))
             AND gc.c_ccode=g.c_ccode_pre
         GROUP BY gc.c_ccode, gc.c_level, gc.c_name
     ),
-    temp01 AS(
-        SELECT gc.c_ccode, gc.c_name AS pinlei_name, SUM(ds.c_sale) AS sale, SUM(ds.c_sale)-SUM(ds.c_at_sale) AS maoli,
-            CASE WHEN SUM(ds.c_sale)=0 THEN NULL ELSE (SUM(ds.c_sale)-SUM(ds.c_at_sale))/SUM(ds.c_sale) END AS maoliv,
-            SUM(ds.c_sale_count) AS laike, CASE WHEN SUM(ds.c_sale_count)=0 THEN NULL ELSE SUM(ds.c_sale)/SUM(ds.c_sale_count) END AS kd,
-            SUM(ds.c_at_sale) AS c_at_sale
+    -- 品类销售 / 毛利
+    cat_sale AS (
+        SELECT gc.c_ccode, gc.c_name AS pinlei_name,
+            SUM(ds.c_sale) AS sale,
+            SUM(ds.c_sale)-SUM(ds.c_at_sale) AS maoli,
+            CASE WHEN SUM(ds.c_sale)=0 THEN NULL
+                 ELSE (SUM(ds.c_sale)-SUM(ds.c_at_sale))/SUM(ds.c_sale) END AS maoliv,
+            SUM(ds.c_sale_count) AS laike,
+            CASE WHEN SUM(ds.c_sale_count)=0 THEN NULL
+                 ELSE SUM(ds.c_sale)/SUM(ds.c_sale_count) END AS kd
         FROM tb_gdsclass gc
-        LEFT JOIN tbs_d_supp ds ON ds.c_type=N'品类' AND ds.c_dt>=@pstart AND ds.c_dt<=@pend AND ds.c_id=gc.c_ccode
-            AND ds.c_store_id IN (SELECT c_str FROM dbo.uf_io_split_string(@pstore,',','store',1,default))
+        LEFT JOIN tbs_d_supp ds ON ds.c_type=N'品类'
+            AND ds.c_dt BETWEEN @pstart AND @pend
+            AND ds.c_id=gc.c_ccode
+            AND ds.c_store_id IN (SELECT store_id FROM stores)
         WHERE (ISNULL(@pclevel,'')='' OR gc.c_level=@pclevel)
-            AND (ISNULL(@pccode,'')='' OR gc.c_ccode=@pccode)
+            AND (ISNULL(@pccode,'')='' OR gc.c_ccode LIKE @pccode+'%')
             AND gc.c_ccode NOT LIKE '44%'
         GROUP BY gc.c_ccode, gc.c_name
     ),
-    temp02 AS(
-        SELECT a.c_ccode, a.pinlei_name, a.sale, a.maoli, a.maoliv, a.laike, a.kd,
-            b.c_kind, b.dongxiao, b.dongxiaov, b.budongxiao, c.c_sale AS c_sale_par, c.c_maoli AS c_maoli_par,
-            (SELECT SUM(c_sale) FROM tbs_d_supp WHERE c_type=N'机构' AND c_dt>=@pstart AND c_dt<=@pend
-                AND c_store_id IN (SELECT c_str FROM dbo.uf_io_split_string(@pstore,',','store',1,default))) AS c_store_sale,
-            (SELECT SUM(c_sale)-SUM(c_at_sale) FROM tbs_d_supp WHERE c_type=N'机构' AND c_dt>=@pstart AND c_dt<=@pend
-                AND c_store_id IN (SELECT c_str FROM dbo.uf_io_split_string(@pstore,',','store',1,default))) AS c_store_maoli
-        FROM temp01 a
-        LEFT JOIN temp00 b ON a.c_ccode=b.c_ccode
-        LEFT JOIN (
-            SELECT c_id, SUM(c_sale) AS c_sale, SUM(c_sale-c_at_sale) AS c_maoli FROM tbs_d_supp
-            WHERE c_type=N'品类' AND c_dt>=@pstart AND c_dt<=@pend
-                AND c_store_id IN (SELECT c_str FROM dbo.uf_io_split_string(@pstore,',','store',1,default))
-            GROUP BY c_id
-        ) c ON CASE WHEN LEN(a.c_ccode)=3 THEN SUBSTRING(a.c_ccode,1,LEN(a.c_ccode)-1) ELSE SUBSTRING(a.c_ccode,1,LEN(a.c_ccode)-2) END=c.c_id
+    -- 上级品类汇总（用于课占部占比）
+    par_sale AS (
+        SELECT c_id, SUM(c_sale) AS c_sale, SUM(c_sale-c_at_sale) AS c_maoli
+        FROM tbs_d_supp
+        WHERE c_type=N'品类'
+            AND c_dt BETWEEN @pstart AND @pend
+            AND c_store_id IN (SELECT store_id FROM stores)
+        GROUP BY c_id
+    ),
+    -- 机构汇总（全局常量，只算一次）
+    store_total AS (
+        SELECT SUM(c_sale) AS c_store_sale, SUM(c_sale)-SUM(c_at_sale) AS c_store_maoli
+        FROM tbs_d_supp
+        WHERE c_type=N'机构'
+            AND c_dt BETWEEN @pstart AND @pend
+            AND c_store_id IN (SELECT store_id FROM stores)
     )
-    SELECT a.c_ccode AS 品类号码, LEN(a.c_ccode) AS 品类长度, a.pinlei_name AS 品类名称, a.sale AS 销售额, a.maoli AS 毛利额, a.maoliv AS 毛利率,
-        a.laike AS 来客数, a.kd AS 客单价, a.c_kind AS 品项数, a.dongxiao AS 动销数, a.dongxiaov AS 动销率, a.budongxiao AS 不动销数,
-        CASE WHEN a.c_sale_par=0 THEN NULL ELSE a.sale/a.c_sale_par END AS 销售额占比_课占部,
-        CASE WHEN a.c_store_sale=0 THEN NULL ELSE a.sale/a.c_store_sale END AS 销售额占比_课占店,
-        CASE WHEN a.c_maoli_par=0 THEN NULL ELSE a.maoli/a.c_maoli_par END AS 毛利额占比_课占部,
-        CASE WHEN a.c_store_maoli=0 THEN NULL ELSE a.maoli/a.c_store_maoli END AS 毛利额占比_课占店
-    FROM temp02 a WHERE 1=1 AND (ISNULL(@pccode,'')='' OR a.c_ccode=@pccode) ORDER BY a.c_ccode
+    SELECT
+        a.c_ccode AS 品类号码, LEN(a.c_ccode) AS 品类长度, a.pinlei_name AS 品类名称,
+        a.sale AS 销售额, a.maoli AS 毛利额, a.maoliv AS 毛利率,
+        a.laike AS 来客数, a.kd AS 客单价,
+        b.c_kind AS 品项数, b.dongxiao AS 动销数, b.dongxiaov AS 动销率, b.budongxiao AS 不动销数,
+        CASE WHEN p.c_sale=0        THEN NULL ELSE a.sale  / p.c_sale        END AS 销售额占比_课占部,
+        CASE WHEN t.c_store_sale=0  THEN NULL ELSE a.sale  / t.c_store_sale  END AS 销售额占比_课占店,
+        CASE WHEN p.c_maoli=0       THEN NULL ELSE a.maoli / p.c_maoli       END AS 毛利额占比_课占部,
+        CASE WHEN t.c_store_maoli=0 THEN NULL ELSE a.maoli / t.c_store_maoli END AS 毛利额占比_课占店
+    FROM cat_sale a
+    LEFT JOIN gds_cnt b ON b.c_ccode=a.c_ccode
+    LEFT JOIN par_sale p ON p.c_id=CASE
+        WHEN LEN(a.c_ccode)=3 THEN SUBSTRING(a.c_ccode,1,LEN(a.c_ccode)-1)
+        ELSE SUBSTRING(a.c_ccode,1,LEN(a.c_ccode)-2) END
+    CROSS JOIN store_total t
+    WHERE (ISNULL(@pccode,'')='' OR a.c_ccode LIKE @pccode+'%')
+    ORDER BY a.c_ccode
     """
     key = f"t3:{store}:{start}:{end}:{ccode}:{clevel}"
     def _query():
