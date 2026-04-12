@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售分析 - 宜家天润超市</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/report_embed.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>if (typeof echarts === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"><\/script>')</script>
+</head>
+<body>
+
+    <div class="header">
+        <div class="subpage-header-left">
+            <a href="/" class="back-btn" title="返回首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+            <h1>销售分析</h1>
+        </div>
+        <div class="header-right">
+            <div class="date-info">
+                数据日期: <span class="date-val" id="dataDate">加载中...</span>
+                <br>刷新时间: <span id="refreshTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+
+        <!-- 报表区：T1 / T2 / T4 -->
+        <div class="chart-panel">
+            <!-- 图标选择行 -->
+            <div class="rpt-shortcut-row" id="rptTabRow">
+                <div class="rpt-shortcut" data-report="t1" onclick="openReport('t1')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="13" width="4" height="8"/><rect x="9" y="9" width="4" height="12"/>
+                            <rect x="16" y="5" width="4" height="16"/><line x1="1" y1="21" x2="23" y2="21"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T1 销售客单按时段</div>
+                    <div class="rpt-shortcut-desc">各时段销售 · 客流 · 客单</div>
+                </div>
+                <div class="rpt-shortcut" data-report="t2" onclick="openReport('t2')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            <line x1="8" y1="15" x2="16" y2="15"/><line x1="8" y1="19" x2="13" y2="19"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T2 总客流日报</div>
+                    <div class="rpt-shortcut-desc">按日汇总客流 · 客单 · 毛利</div>
+                </div>
+                <div class="rpt-shortcut" data-report="t4" onclick="openReport('t4')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="2" x2="12" y2="22"/>
+                            <rect x="2" y="6" width="8" height="5" rx="1"/><rect x="14" y="10" width="8" height="5" rx="1"/>
+                            <rect x="2" y="14" width="8" height="4" rx="1"/><rect x="14" y="4" width="8" height="4" rx="1"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T4 销售时段对比</div>
+                    <div class="rpt-shortcut-desc">本期 vs 对比期 · 时段差异</div>
+                </div>
+            </div>
+
+            <!-- 嵌入报表内容区（点击图标后展开） -->
+            <div id="rptPanel" style="display:none;">
+                <div class="filter-bar" id="rptFilterBar"></div>
+                <div id="rptRowCount" class="rpt-meta"></div>
+                <div id="rptChartArea" class="hidden">
+                    <div id="rptMainChart" style="height:280px;margin-bottom:8px;"></div>
+                </div>
+                <div id="rptTableWrap" class="table-wrap">
+                    <div class="status-msg">请点击查询按钮</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 门店近7天销售额趋势 -->
+        <div class="chart-panel">
+            <h3>门店近7天销售额趋势</h3>
+            <div class="chart-container tall" id="storeTrendChart"></div>
+        </div>
+
+        <!-- 近30天销售趋势 -->
+        <div class="chart-panel">
+            <h3>近30天销售趋势</h3>
+            <div class="chart-container tall" id="trendChart"></div>
+        </div>
+
+    </div>
+
+    <div class="refresh-info">数据每5分钟缓存刷新 | 页面每10分钟自动刷新</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <script src="/static/js/report_utils.js"></script>
+    <script src="/static/js/sales.js"></script>
+</body>
+</html>

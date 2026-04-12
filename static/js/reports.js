@@ -642,6 +642,16 @@ async function init() {
         });
     });
 
+    // Hash navigation: /reports#t2 → jump to that report
+    const hash = location.hash.slice(1);
+    if (hash && REPORTS[hash]) {
+        currentReport = hash;
+        currentGroup  = REPORTS[hash].group;
+        document.querySelectorAll('#tabBar .tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.group === currentGroup);
+        });
+    }
+
     renderSubTabs();
     renderFilters();
     clearContent();

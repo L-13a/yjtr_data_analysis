@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品类分析 - 宜家天润超市</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>if (typeof echarts === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"><\/script>')</script>
+</head>
+<body>
+
+    <div class="header">
+        <div class="subpage-header-left">
+            <a href="/" class="back-btn" title="返回首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+            <h1>品类分析</h1>
+        </div>
+        <div class="header-right">
+            <div class="date-info">
+                数据日期: <span class="date-val" id="dataDate">加载中...</span>
+                <br>刷新时间: <span id="refreshTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- 品类销售分布 + 品类时段客流 -->
+        <div class="charts-row">
+            <div class="chart-panel">
+                <div class="panel-header">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button id="categoryBackBtn" onclick="drillUpCategory()" style="display:none;background:transparent;border:1px solid #4fc3f7;color:#4fc3f7;padding:2px 10px;border-radius:5px;font-size:12px;cursor:pointer;line-height:1.5;">返回</button>
+                        <h3 id="categoryChartTitle">品类销售分布</h3>
+                    </div>
+                    <select class="store-filter" id="categoryStoreFilter">
+                        <option value="">全部门店</option>
+                    </select>
+                </div>
+                <div class="chart-container tall" id="categoryChart"></div>
+            </div>
+            <div class="chart-panel">
+                <h3 id="categoryHourlyTitle">品类时段客流分布 <span style="color:#78909c;font-size:12px;font-weight:normal">（点击左侧环形图选择品类）</span></h3>
+                <div class="chart-container tall" id="categoryHourlyChart">
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#546e7a;font-size:14px;">选择品类后显示</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-info">数据每5分钟缓存刷新 | 页面每10分钟自动刷新</div>
+    <script src="/static/js/category.js"></script>
+</body>
+</html>

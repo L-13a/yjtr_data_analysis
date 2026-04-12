@@ -19,6 +19,31 @@ def reports_page():
     return render_template("reports.html")
 
 
+@bp.route("/sales")
+def sales_page():
+    return render_template("sales.html")
+
+
+@bp.route("/stores")
+def stores_page():
+    return render_template("stores.html")
+
+
+@bp.route("/category")
+def category_page():
+    return render_template("category.html")
+
+
+@bp.route("/products")
+def products_page():
+    return render_template("products.html")
+
+
+@bp.route("/supply")
+def supply_page():
+    return render_template("supply.html")
+
+
 # ============================================================
 # Query functions（模块级，供路由和预热共用）
 # ============================================================

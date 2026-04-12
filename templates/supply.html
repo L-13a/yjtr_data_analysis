@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应链 - 宜家天润超市</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/report_embed.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="subpage-header-left">
+            <a href="/" class="back-btn" title="返回首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+            <h1>供应链</h1>
+        </div>
+        <div class="header-right">
+            <div class="date-info">
+                数据日期: <span class="date-val" id="dataDate">加载中...</span>
+                <br>刷新时间: <span id="refreshTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+
+        <!-- 报表区：T7 / T11.1 -->
+        <div class="chart-panel">
+            <!-- 图标选择行 -->
+            <div class="rpt-shortcut-row" id="rptTabRow" style="grid-template-columns: 1fr 1fr;">
+                <div class="rpt-shortcut" data-report="t7" onclick="openReport('t7')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="1" y="3" width="15" height="13"/>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                            <circle cx="5.5" cy="18.5" r="2.5"/>
+                            <circle cx="18.5" cy="18.5" r="2.5"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T7 供应商到货率</div>
+                    <div class="rpt-shortcut-desc">订货 · 到货 · 到货量率 · 到货额率</div>
+                </div>
+                <div class="rpt-shortcut" data-report="t11" onclick="openReport('t11')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                            <line x1="2" y1="20" x2="22" y2="20"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T11.1 供应商动销率</div>
+                    <div class="rpt-shortcut-desc">单品数 · 动销数 · 不动销 · 动销率</div>
+                </div>
+            </div>
+
+            <!-- 嵌入报表内容区 -->
+            <div id="rptPanel" style="display:none;">
+                <div class="filter-bar" id="rptFilterBar"></div>
+                <div id="rptRowCount" class="rpt-meta"></div>
+                <div id="rptTableWrap" class="table-wrap">
+                    <div class="status-msg">请点击查询按钮</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="refresh-info">数据每5分钟缓存刷新</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <script src="/static/js/report_utils.js"></script>
+    <script src="/static/js/supply.js"></script>
+</body>
+</html>

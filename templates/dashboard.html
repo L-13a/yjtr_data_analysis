@@ -7,15 +7,12 @@
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script>if (typeof echarts === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"><\/script>')</script>
 </head>
 <body>
 
     <div class="header">
         <h1>宜家天润超市数据看板</h1>
         <div class="header-right">
-            <a href="/reports" class="nav-btn">报表中心 ›</a>
             <div class="date-info">
                 数据日期: <span class="date-val" id="dataDate">加载中...</span>
                 <br>刷新时间: <span id="refreshTime"></span>
@@ -25,7 +22,7 @@
 
     <div class="dashboard">
         <!-- Row 1: KPI Cards -->
-        <div class="kpi-row" id="kpiRow">
+        <div class="kpi-row">
             <div class="kpi-card">
                 <div class="kpi-label">今日销售额</div>
                 <div class="kpi-value" id="kpiSales">--</div>
@@ -53,63 +50,79 @@
             </div>
         </div>
 
-        <!-- Row 2: 各时段总客流（全宽） -->
-        <div class="chart-panel">
-            <h3>各时段总客流</h3>
-            <div class="chart-container" id="hourlyChart"></div>
-        </div>
-
-        <!-- Row 3: 热销商品（全宽，右上角门店筛选器） -->
-        <div class="chart-panel">
-            <div class="panel-header">
-                <h3>热销商品 TOP 15</h3>
-                <select class="store-filter" id="topProductsStoreFilter">
-                    <option value="">全部门店</option>
-                </select>
-            </div>
-            <div id="topProducts">
-                <div class="loading">加载中</div>
-            </div>
-        </div>
-
-        <!-- Row 4: 品类销售(1/2) + 品类时段客流(1/2) -->
-        <div class="charts-row">
-            <div class="chart-panel">
-                <div class="panel-header">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <button id="categoryBackBtn" onclick="drillUpCategory()" style="display:none;background:transparent;border:1px solid #4fc3f7;color:#4fc3f7;padding:2px 10px;border-radius:5px;font-size:12px;cursor:pointer;line-height:1.5;">返回</button>
-                        <h3 id="categoryChartTitle">品类销售分布</h3>
-                    </div>
-                    <select class="store-filter" id="categoryStoreFilter">
-                        <option value="">全部门店</option>
-                    </select>
+        <!-- Module Navigation Grid -->
+        <div class="module-nav">
+            <a href="/sales" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="22 12 18 7 12 13 8 9 2 15"/>
+                        <polyline points="16 7 22 7 22 13"/>
+                    </svg>
                 </div>
-                <div class="chart-container tall" id="categoryChart"></div>
-            </div>
-            <div class="chart-panel">
-                <h3 id="categoryHourlyTitle">品类时段客流分布 <span style="color:#78909c;font-size:12px;font-weight:normal">（点击左侧环形图选择品类）</span></h3>
-                <div class="chart-container tall" id="categoryHourlyChart">
-                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#546e7a;font-size:14px;">选择品类后显示</div>
+                <div class="module-name">销售分析</div>
+                <div class="module-desc">趋势 · 门店对比</div>
+            </a>
+
+            <a href="/stores" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
                 </div>
-            </div>
-        </div>
+                <div class="module-name">门店运营</div>
+                <div class="module-desc">排名 · 客流时段</div>
+            </a>
 
-        <!-- Row 5: 门店近7天销售额趋势（全宽） -->
-        <div class="chart-panel">
-            <h3>门店近7天销售额趋势</h3>
-            <div class="chart-container tall" id="storeTrendChart"></div>
-        </div>
+            <a href="/category" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                        <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                    </svg>
+                </div>
+                <div class="module-name">品类分析</div>
+                <div class="module-desc">分布 · 时段客流</div>
+            </a>
 
-        <!-- Row 6: 近30天销售趋势（全宽） -->
-        <div class="chart-panel">
-            <h3>近30天销售趋势</h3>
-            <div class="chart-container tall" id="trendChart"></div>
-        </div>
+            <a href="/products" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="21 8 21 21 3 21 3 8"/>
+                        <rect x="1" y="3" width="22" height="5"/>
+                        <line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                </div>
+                <div class="module-name">商品管理</div>
+                <div class="module-desc">热销 TOP 15</div>
+            </a>
 
-        <!-- Row 7: 门店销售排名（全宽） -->
-        <div class="chart-panel">
-            <h3>门店销售排名</h3>
-            <div class="chart-container" id="storeChart"></div>
+            <a href="/supply" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="3" width="15" height="13"/>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                        <circle cx="5.5" cy="18.5" r="2.5"/>
+                        <circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                </div>
+                <div class="module-name">供应链</div>
+                <div class="module-desc">供应商 · 库存</div>
+            </a>
+
+            <a href="/reports" class="module-card">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <line x1="10" y1="9" x2="8" y2="9"/>
+                    </svg>
+                </div>
+                <div class="module-name">报表中心</div>
+                <div class="module-desc">13 张专项报表</div>
+            </a>
         </div>
     </div>
 

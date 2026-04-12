@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - 宜家天润超市</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="subpage-header-left">
+            <a href="/" class="back-btn" title="返回首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></a>
+            <h1>商品管理</h1>
+        </div>
+        <div class="header-right">
+            <div class="date-info">
+                数据日期: <span class="date-val" id="dataDate">加载中...</span>
+                <br>刷新时间: <span id="refreshTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- 热销商品 TOP 15 -->
+        <div class="chart-panel">
+            <div class="panel-header">
+                <h3>热销商品 TOP 15</h3>
+                <select class="store-filter" id="topProductsStoreFilter">
+                    <option value="">全部门店</option>
+                </select>
+            </div>
+            <div id="topProducts">
+                <div class="loading">加载中</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-info">数据每5分钟缓存刷新 | 页面每10分钟自动刷新</div>
+    <script src="/static/js/products.js"></script>
+</body>
+</html>
