@@ -234,3 +234,161 @@ async function loadAll() {
 loadStores();
 loadAll();
 setInterval(loadAll, 600000);
+
+// ============================================================
+// 嵌入报表：T3 / T11.2
+// ============================================================
+const CATEGORY_REPORTS = {
+    t3: {
+        label: 'T3 品类销售分析',
+        api: '/api/t3_category_analysis',
+        columns: [
+            {key:'品类号码',label:'品类号码'},{key:'品类名称',label:'品类名称'},
+            {key:'销售额',label:'销售额',fmt:'money'},{key:'毛利额',label:'毛利额',fmt:'money'},
+            {key:'毛利率',label:'毛利率',fmt:'pct'},{key:'来客数',label:'来客数',fmt:'int'},
+            {key:'客单价',label:'客单价',fmt:'money'},{key:'品项数',label:'品项数',fmt:'int'},
+            {key:'动销数',label:'动销数',fmt:'int'},{key:'动销率',label:'动销率',fmt:'pct'},
+            {key:'不动销数',label:'不动销数',fmt:'int'},
+            {key:'销售额占比_课占部',label:'课占部(销)',fmt:'pct'},
+            {key:'销售额占比_课占店',label:'课占店(销)',fmt:'pct'},
+            {key:'毛利额占比_课占部',label:'课占部(利)',fmt:'pct'},
+            {key:'毛利额占比_课占店',label:'课占店(利)',fmt:'pct'}
+        ]
+    },
+    t11_2: {
+        label: 'T11.2 品类动销率',
+        api: '/api/t11_2_category_movement',
+        chart: 'category_movement',
+        columns: [
+            {key:'分类号码',label:'分类号码'},{key:'分类名称',label:'分类名称'},
+            {key:'单品数',label:'单品数',fmt:'int'},{key:'动销数',label:'动销数',fmt:'int'},
+            {key:'动销率',label:'动销率',fmt:'pct'},{key:'不动销数',label:'不动销数',fmt:'int'}
+        ]
+    }
+};
+
+let currentCategoryReport = null;
+let catStoreList = [];
+let catLastData = [];
+
+async function loadCatStores() {
+    try {
+        catStoreList = await fetch('/api/stores').then(r => r.json());
+    } catch(e) {
+        catStoreList = [{id:'11021', name:'默认门店'}];
+    }
+}
+
+function openCategoryReport(reportId) {
+    currentCategoryReport = reportId;
+    catLastData = [];
+
+    document.querySelectorAll('#rptTabRow .rpt-shortcut').forEach(el => {
+        el.classList.toggle('active', el.dataset.report === reportId);
+    });
+
+    document.getElementById('rptPanel').style.display = 'block';
+    renderCategoryFilterBar(reportId);
+    document.getElementById('rptChartArea').classList.add('hidden');
+    document.getElementById('rptTableWrap').innerHTML = '<div class="status-msg">请点击查询按钮</div>';
+    document.getElementById('rptRowCount').textContent = '';
+}
+
+function renderCategoryFilterBar(reportId) {
+    const bar = document.getElementById('rptFilterBar');
+    const storeOpts = catStoreList.map(s => `<option value="${s.id}">${s.name}(${s.id})</option>`).join('');
+
+    bar.innerHTML = `
+        <div><label>机构</label><select id="f_store">${storeOpts}</select></div>
+        <div class="date-range-group">
+            <div class="date-range-label">查询区间</div>
+            <div class="date-presets">
+                <button class="preset-btn" onclick="applyPreset('yesterday','start','end')">昨天</button>
+                <button class="preset-btn" onclick="applyPreset('today','start','end')">今天</button>
+                <button class="preset-btn" onclick="applyPreset('7d','start','end')">近7天</button>
+                <button class="preset-btn" onclick="applyPreset('30d','start','end')">近30天</button>
+                <button class="preset-btn" onclick="applyPreset('thismonth','start','end')">本月</button>
+                <button class="preset-btn" onclick="applyPreset('lastmonth','start','end')">上月</button>
+            </div>
+            <input type="text" id="range_start" class="date-range-input" placeholder="点击选择日期范围" readonly>
+            <input type="hidden" id="f_start">
+            <input type="hidden" id="f_end">
+        </div>
+        <div><label>品类编码</label><input type="text" id="f_ccode" placeholder="如 11" style="width:80px;"></div>
+        <div style="display:flex;gap:8px;">
+            <button class="query-btn" onclick="queryCategoryReport()">查询</button>
+            <button class="export-btn" onclick="exportCategoryCSV()">导出 CSV</button>
+        </div>`;
+
+    initRangePicker('start', 'end');
+}
+
+async function queryCategoryReport() {
+    const report = CATEGORY_REPORTS[currentCategoryReport];
+    if (!report) return;
+
+    document.getElementById('rptTableWrap').innerHTML = '<div class="status-msg loading-spinner">加载中</div>';
+    document.getElementById('rptChartArea').classList.add('hidden');
+    document.getElementById('rptRowCount').textContent = '';
+
+    const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const params = new URLSearchParams();
+    if (get('f_store')) params.set('store', get('f_store'));
+    if (get('f_start')) params.set('start', get('f_start'));
+    if (get('f_end'))   params.set('end',   get('f_end'));
+    if (get('f_ccode')) params.set('ccode', get('f_ccode'));
+
+    try {
+        const json = await fetch(report.api + '?' + params).then(r => r.json());
+        if (json.error) {
+            document.getElementById('rptTableWrap').innerHTML = `<div class="status-msg error">查询出错: ${json.error}</div>`;
+            return;
+        }
+        const rows = json.rows || json;
+        catLastData = rows;
+        document.getElementById('rptRowCount').textContent = `共 ${rows.length} 条记录`;
+        renderEmbedTable('rptTableWrap', rows, report.columns);
+        if (report.chart === 'category_movement') renderMovementChart(rows);
+    } catch(e) {
+        document.getElementById('rptTableWrap').innerHTML = `<div class="status-msg error">请求失败: ${e.message}</div>`;
+    }
+}
+
+function renderMovementChart(data) {
+    if (!data || !data.length) return;
+    const chartArea = document.getElementById('rptChartArea');
+    chartArea.classList.remove('hidden');
+    const dom = document.getElementById('rptMainChart');
+    const existing = echarts.getInstanceByDom(dom);
+    if (existing) existing.dispose();
+    const chart = echarts.init(dom);
+    const names = data.map(r => r['分类名称'] || r['分类号码']).slice(0, 30);
+    const rates = data.map(r => +(r['动销率'] * 100).toFixed(2)).slice(0, 30);
+    chart.setOption({
+        tooltip: { trigger: 'axis', formatter: p => `${p[0].name}: ${p[0].value}%` },
+        grid: { left: 120, right: 40, top: 10, bottom: 30 },
+        xAxis: { type: 'value', max: 100, axisLabel: { color: '#546e7a', formatter: v => v + '%' }, splitLine: { lineStyle: { color: '#1e3a5f44' } } },
+        yAxis: { type: 'category', data: names.slice().reverse(), axisLabel: { color: '#b0bec5', fontSize: 11 } },
+        series: [{ type: 'bar', data: rates.slice().reverse(), itemStyle: { color: p => p.value >= 60 ? '#66bb6a' : p.value >= 30 ? '#ffa726' : '#ef5350' }, barMaxWidth: 20 }]
+    });
+    setTimeout(() => chart.resize(), 100);
+}
+
+function exportCategoryCSV() {
+    const report = CATEGORY_REPORTS[currentCategoryReport];
+    if (!report || !catLastData.length) return;
+    let csv = '\uFEFF' + report.columns.map(c => c.label).join(',') + '\n';
+    catLastData.forEach(row => {
+        csv += report.columns.map(c => {
+            const v = row[c.key];
+            if (v === null || v === undefined) return '';
+            return `"${String(v).replace(/"/g, '""')}"`;
+        }).join(',') + '\n';
+    });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+    link.download = `${report.label}_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+loadCatStores();

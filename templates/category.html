@@ -7,6 +7,8 @@
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/report_embed.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script>if (typeof echarts === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"><\/script>')</script>
 </head>
@@ -26,6 +28,44 @@
     </div>
 
     <div class="dashboard">
+
+        <!-- 报表区：T3 / T11.2 -->
+        <div class="chart-panel">
+            <div class="rpt-shortcut-row" id="rptTabRow">
+                <div class="rpt-shortcut" data-report="t3" onclick="openCategoryReport('t3')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                            <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T3 品类销售分析</div>
+                    <div class="rpt-shortcut-desc">销售额 · 毛利 · 动销率</div>
+                </div>
+                <div class="rpt-shortcut" data-report="t11_2" onclick="openCategoryReport('t11_2')">
+                    <div class="rpt-shortcut-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6"  y1="20" x2="6"  y2="14"/>
+                        </svg>
+                    </div>
+                    <div class="rpt-shortcut-name">T11.2 品类动销率</div>
+                    <div class="rpt-shortcut-desc">单品数 · 动销 · 不动销</div>
+                </div>
+            </div>
+            <div id="rptPanel" style="display:none;">
+                <div class="filter-bar" id="rptFilterBar"></div>
+                <div id="rptRowCount" class="rpt-meta"></div>
+                <div id="rptChartArea" class="hidden">
+                    <div id="rptMainChart" style="height:280px;margin-bottom:8px;"></div>
+                </div>
+                <div id="rptTableWrap" class="table-wrap">
+                    <div class="status-msg">请点击查询按钮</div>
+                </div>
+            </div>
+        </div>
+
         <!-- 品类销售分布 + 品类时段客流 -->
         <div class="charts-row">
             <div class="chart-panel">
@@ -50,6 +90,9 @@
     </div>
 
     <div class="refresh-info">数据每5分钟缓存刷新 | 页面每10分钟自动刷新</div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <script src="/static/js/report_utils.js"></script>
     <script src="/static/js/category.js"></script>
 </body>
 </html>

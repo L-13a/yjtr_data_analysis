@@ -37,16 +37,16 @@ yjtr_data_analysis/
 | 后端 | Python Flask + pyodbc |
 | 缓存 | Redis（降级为内存缓存）5 分钟 TTL |
 | 前端 | 原生 HTML/CSS/JS + ECharts 5.5 |
-| 数据库 | SQL Server (`enjoy_shq_test`) |
+| 数据库 | SQL Server (`enjoy_shq`) |
 
 ## 数据流向
 
 ```
-SQL Server (enjoy_shq_test)
-    │  pyodbc 查询
+SQL Server (enjoy_shq)
+    │  pyodbc 查询（NOLOCK，避免锁等待）
     ▼
 db.py
-    │  get_latest_date() → 动态获取数据库最新日期
+    │  get_latest_date() → 取销售记录中最新一条的日期，作为看板默认日期
     │  cached_query()    → Redis / 内存 5 分钟缓存
     ▼
 routes/dashboard.py   → 8 个看板 API
@@ -117,7 +117,7 @@ pip3 install -r requirements.txt
 DB_CONFIG = {
     "driver": "{ODBC Driver 17 for SQL Server}",
     "server": "你的服务器地址,端口",
-    "database": "enjoy_shq_test",
+    "database": "enjoy_shq",
     "uid": "用户名",
     "pwd": "密码",
 }

@@ -59,7 +59,7 @@ def _query_overview():
                SUM(c_amount) as total_sales,
                SUM(c_amount - ISNULL(c_aet_cost, 0)) as total_profit,
                COUNT(DISTINCT c_cardno) as member_count
-        FROM tb_o_sg
+        FROM tb_o_sg WITH (NOLOCK)
         WHERE CONVERT(varchar, c_datetime, 23) = ?
           AND c_type = N'销售' AND c_amount > 0
     """, latest)
@@ -69,7 +69,7 @@ def _query_overview():
         SELECT COUNT(DISTINCT c_id) as bill_count,
                SUM(c_amount) as total_sales,
                SUM(c_amount - ISNULL(c_aet_cost, 0)) as total_profit
-        FROM tb_o_sg
+        FROM tb_o_sg WITH (NOLOCK)
         WHERE CONVERT(varchar, c_datetime, 23) = CONVERT(varchar, DATEADD(day, -1, ?), 23)
           AND c_type = N'销售' AND c_amount > 0
     """, latest)
@@ -114,7 +114,7 @@ def _query_trend():
                SUM(c_amount) as sales,
                COUNT(DISTINCT c_id) as bills,
                SUM(c_amount - ISNULL(c_aet_cost, 0)) as profit
-        FROM tb_o_sg
+        FROM tb_o_sg WITH (NOLOCK)
         WHERE c_datetime >= DATEADD(day, -30, ?)
           AND c_datetime <= DATEADD(day, 1, ?)
           AND c_type = N'销售' AND c_amount > 0
@@ -141,8 +141,8 @@ def _query_store_rank():
                SUM(s.c_amount) as sales,
                COUNT(DISTINCT s.c_id) as bills,
                SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
-        FROM tb_o_sg s
-        LEFT JOIN tb_store t ON s.c_store_id = t.c_id
+        FROM tb_o_sg s WITH (NOLOCK)
+        LEFT JOIN tb_store t WITH (NOLOCK) ON s.c_store_id = t.c_id
         WHERE CONVERT(varchar, s.c_datetime, 23) = ?
           AND s.c_type = N'销售' AND s.c_amount > 0
           AND t.c_type = N'分店'
@@ -176,8 +176,8 @@ def _query_category(store_id=None):
                END as category,
                SUM(s.c_amount) as sales,
                SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
-        FROM tb_o_sg s
-        JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+        FROM tb_o_sg s WITH (NOLOCK)
+        JOIN tb_gds g WITH (NOLOCK) ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
         WHERE CONVERT(varchar, s.c_datetime, 23) = ?
           AND s.c_type = N'销售' AND s.c_amount > 0
           {store_filter}
@@ -208,7 +208,7 @@ def _query_hourly():
         SELECT DATEPART(hour, c_datetime) as hr,
                SUM(c_amount) as sales,
                COUNT(DISTINCT c_id) as bills
-        FROM tb_o_sg
+        FROM tb_o_sg WITH (NOLOCK)
         WHERE CONVERT(varchar, c_datetime, 23) = ?
           AND c_type = N'销售' AND c_amount > 0
         GROUP BY DATEPART(hour, c_datetime)
@@ -243,8 +243,8 @@ def _query_top_products(store_id=None):
                    SUM(s.c_amount) as sales,
                    SUM(s.c_qtty) as qty,
                    SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
-            FROM tb_o_sg s
-            LEFT JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+            FROM tb_o_sg s WITH (NOLOCK)
+            LEFT JOIN tb_gds g WITH (NOLOCK) ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
             WHERE CONVERT(varchar, s.c_datetime, 23) = ?
               AND s.c_type = N'销售' AND s.c_amount > 0
               AND s.c_store_id = ?
@@ -258,8 +258,8 @@ def _query_top_products(store_id=None):
                    SUM(s.c_amount) as sales,
                    SUM(s.c_qtty) as qty,
                    SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
-            FROM tb_o_sg s
-            LEFT JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+            FROM tb_o_sg s WITH (NOLOCK)
+            LEFT JOIN tb_gds g WITH (NOLOCK) ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
             WHERE CONVERT(varchar, s.c_datetime, 23) = ?
               AND s.c_type = N'销售' AND s.c_amount > 0
             GROUP BY s.c_gcode, g.c_name
@@ -301,8 +301,8 @@ def _query_daily_flow(start=None, end=None):
                    SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
                    CASE WHEN SUM(a.c_amount) = 0 THEN NULL
                         ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
-            FROM tb_o_sg a
-            LEFT JOIN tb_store b ON a.c_store_id = b.c_id
+            FROM tb_o_sg a WITH (NOLOCK)
+            LEFT JOIN tb_store b WITH (NOLOCK) ON a.c_store_id = b.c_id
             WHERE CONVERT(varchar(10), a.c_datetime, 23) >= CONVERT(varchar(10), DATEADD(day, -7, ?), 23)
               AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
               AND a.c_id NOT LIKE '-%%'
@@ -330,8 +330,8 @@ def _query_daily_flow(start=None, end=None):
                    SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0)) AS profit,
                    CASE WHEN SUM(a.c_amount) = 0 THEN NULL
                         ELSE (SUM(a.c_amount) - SUM(ISNULL(a.c_pt_cost, 0) * ISNULL(a.c_qtty, 0))) * 1.0 / SUM(a.c_amount) END AS profit_rate
-            FROM tb_o_sg a
-            LEFT JOIN tb_store b ON a.c_store_id = b.c_id
+            FROM tb_o_sg a WITH (NOLOCK)
+            LEFT JOIN tb_store b WITH (NOLOCK) ON a.c_store_id = b.c_id
             WHERE CONVERT(varchar(10), a.c_datetime, 23) >= ?
               AND CONVERT(varchar(10), a.c_datetime, 23) <= ?
               AND a.c_id NOT LIKE '-%%'
@@ -370,8 +370,8 @@ def _query_store_trend():
     cursor.execute("""
         SELECT t.c_name, CONVERT(varchar, s.c_datetime, 23) as dt,
                SUM(s.c_amount) as sales
-        FROM tb_o_sg s
-        JOIN tb_store t ON s.c_store_id = t.c_id
+        FROM tb_o_sg s WITH (NOLOCK)
+        JOIN tb_store t WITH (NOLOCK) ON s.c_store_id = t.c_id
         WHERE s.c_datetime >= DATEADD(day, -7, ?)
           AND s.c_datetime <= DATEADD(day, 1, ?)
           AND s.c_type = N'销售' AND s.c_amount > 0
@@ -466,8 +466,8 @@ def _query_category_l2(l1_name, store_id=None):
         SELECT LEFT(g.c_ccode, 3) as l2_code,
                SUM(s.c_amount) as sales,
                SUM(s.c_amount - ISNULL(s.c_aet_cost, 0)) as profit
-        FROM tb_o_sg s
-        JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+        FROM tb_o_sg s WITH (NOLOCK)
+        JOIN tb_gds g WITH (NOLOCK) ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
         WHERE CONVERT(varchar, s.c_datetime, 23) = ?
           AND s.c_type = N'销售' AND s.c_amount > 0
           AND LEFT(g.c_ccode, 2) = ?
@@ -510,8 +510,8 @@ def _query_category_hourly(category=None, ccode=None, store_id=None):
         SELECT DATEPART(hour, s.c_datetime) as hr,
                COUNT(DISTINCT s.c_id) as bills,
                SUM(s.c_amount) as sales
-        FROM tb_o_sg s
-        JOIN tb_gds g ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
+        FROM tb_o_sg s WITH (NOLOCK)
+        JOIN tb_gds g WITH (NOLOCK) ON s.c_gcode = g.c_gcode AND s.c_adno = g.c_adno
         WHERE CONVERT(varchar, s.c_datetime, 23) = ?
           AND s.c_type = N'销售' AND s.c_amount > 0
           {ccode_filter}

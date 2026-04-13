@@ -17,9 +17,9 @@ pyodbc.pooling = False  # 禁用驱动层连接池，避免拿到已被防火墙
 DB_CONFIG = {
     "driver": "{ODBC Driver 17 for SQL Server}",
     "server": "tag.qyyjtr.com,6899",
-    "database": "enjoy_shq_test",
-    "uid": "rou_9999",
-    "pwd": "kl87ngG@f",
+    "database": "enjoy_shq",
+    "uid": "rou_8888",
+    "pwd": "kl89OyG@f",
 }
 
 
@@ -91,15 +91,13 @@ def get_latest_date():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT TOP 1 CONVERT(varchar, c_datetime, 23) as dt
-            FROM tb_o_sg
+            FROM tb_o_sg WITH (NOLOCK)
             WHERE c_type = N'销售'
-            GROUP BY CONVERT(varchar, c_datetime, 23)
-            HAVING SUM(c_amount) > 0 AND COUNT(DISTINCT c_id) >= 1000
-            ORDER BY dt DESC
+            ORDER BY c_datetime DESC
         """)
         r = cursor.fetchone()
         conn.close()
-        return r[0] if r else "2024-09-09"
+        return r[0]
     return cached_query("latest_date", _query)
 
 
